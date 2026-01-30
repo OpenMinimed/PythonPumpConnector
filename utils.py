@@ -14,10 +14,6 @@ def add_submodule_to_path():
     logging.debug(f"{d} was added to path")
     return
 
-def advertise(mobile_name:str, instance_id:int=1) -> None:
-    
-    return
-
 def gen_mobile_name():
     while True:
         num = random.randint(100000, 999999)
@@ -158,13 +154,6 @@ def add_chars_and_services(ble, write_callback, notify_callback, mobile_name):
 
     return SAKE_SRV_ID, SAKE_CHR_ID # TODO: return the other ones + map them nicely??
 
-def batch_exec(cmd_list:list[str]) -> None:
-    for c in cmd_list:
-        print(f"executing {c}")
-        subprocess.run(c, shell=True)
-        sleep(0.1)
-    return
-
 def exec(cmd:str) -> None:
     subprocess.run(cmd, shell=True)
     logging.debug(f"executing: {cmd}")
@@ -185,8 +174,6 @@ def parse_id_from_path(path: str) -> tuple[int, int]:
     char_id = int(char_str.replace('char', ''))
 
     return (service_id, char_id)
-
-import subprocess
 
 def forget_pump_devices():
     """
@@ -210,12 +197,19 @@ def forget_pump_devices():
                 continue
             mac, name = parts[1], parts[2]
             if name.startswith("Pump"):
-                print(f"Removing pairing for {name} ({mac})")
+                logging.debug(f"Removing pairing for {name} ({mac})")
                 subprocess.run(['bluetoothctl', 'remove', mac], check=False)
 
     except subprocess.CalledProcessError as e:
-        print(f"Error running bluetoothctl: {e}")
+        logging.error(f"Error running bluetoothctl: {e}")
+    return
 
-
-if __name__ == "__main__":
-    advertise("Mobile 000001")
+def get_bluetooth_running() -> bool:
+    result = subprocess.run(
+        ["systemctl", "is-active", "bluetooth"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    status = result.stdout.strip()
+    return status == "active" 
