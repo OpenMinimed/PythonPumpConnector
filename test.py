@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from bluezero import peripheral, adapter, advertisement
-from bluezero.broadcaster import Beacon
 
 from threading import Thread
 import os
@@ -16,6 +14,7 @@ add_submodule_to_path() # bit of hacking ;)
 from pysake.handshake_client import HandshakeClient
 
 from pump_advertiser import PumpAdvertiser
+from peripheral_handler import PeripheralHandler, BleService, BleChar
 
 
 CONNECTED = False
@@ -37,25 +36,17 @@ def send_sake_notif():
     print("calling sake char set value...")
     SAKE_CHAR.set_value(zero)
 
-
-
-
-
-def read_callback():
-    print("!!! READ")
-    return [42,]
-
 def notify_callback(notifying, char):
     print("!!! NOTIFY")
-    print("Notifications:", "enabled" if notifying else "disabled")
-    if notifying:
-        # pump wants to be notified, start SAKE handshake
-        send_sake_notif()
+    # print("Notifications:", "enabled" if notifying else "disabled")
+    # if notifying:
+    #     # pump wants to be notified, start SAKE handshake
+    #     send_sake_notif()
+    return
 
 def write_callback(value, options):
-    global buffer, characteristic
     print("!!! WRITE", value)
-
+    return
 
 
 def main():
@@ -72,40 +63,51 @@ def main():
     # for now we need this hack, since if we did not create a sake connection, the device will forget it but our pc will not
     forget_pump_devices()
 
-    # create an advertiser and start it
+    # create an advertiser
     pa = PumpAdvertiser()
-    pa.start_adv()
 
+    # create the handler
+    ph = PeripheralHandler()
+    ph.set_on_connect(pa.on_connect_cb)
+    ph.set_on_disconnect(pa.on_disconnect_cb)
 
-    adapter_addr = list(adapter.Adapter.available())[0].address
-    print(f"using adapter: {adapter_addr}")
+    # create the services
+    service_info_serv = BleService("00000900-0000-1000-0000-009132591325", "Device Info")
+    sake_serv = BleService("FE82", "Sake Service")
+    ph.add_service(service_info_serv)
+    ph.add_service(sake_serv)
 
-    BLE = peripheral.Peripheral(
-        adapter_address=adapter_addr,
-        local_name=MOBILE_NAME
-    )
+    # create the characteristics
+    mn = BleChar("2A29", "Manufacturer Name", "Google")
+    mn_model = BleChar("2A24", "Model Number", "Nexus 5x")
+    sn = BleChar("2A25", "Serial Number", "12345678")
+    hw_rev = BleChar("2A27", "Hardware Revision", "HW 1.0")
+    fw_rev = BleChar("2A26", "Firmware Revision", "FW 1.0")
+    sw_rev = BleChar("2A28", "Software Revision", "2.9.0 f1093d1") # actual application version with commit hash
+    system_id = BleChar("2A23", "System ID", bytes(8))
+    pnp_id = BleChar("2A50", "PNP ID", bytes(7))
+    cert_data = BleChar("2A2A", "Certification Data List", bytes(0))
+    sake_port = BleChar("0000FE82-0000-1000-0000-009132591325", "Sake Port", None, notify_callback, write_callback)
 
-    sake_srv_id, sake_char_id = add_chars_and_services(BLE, write_callback, notify_callback, MOBILE_NAME)
-    print(f"set up {len(BLE.services)} services and {len(BLE.characteristics)} chars ")
-
-    SAKE_CHAR = None
-    for char in BLE.characteristics:
-        s, c = parse_id_from_path(char.path)
-        if s == sake_srv_id and c == sake_char_id:
-            SAKE_CHAR = char
-            break
-    if SAKE_CHAR == None:
-        raise Exception("Could not find SAKE char!")
-    print(f"sake char resolved to {SAKE_CHAR.path}")
-
-    BLE.on_connect = on_connect
-    BLE.on_disconnect = on_disconnect
-
-    thread = Thread(target = adv_thread)
+    # add all chars
+    for char in [mn, mn_model, sn, hw_rev, fw_rev, sw_rev, system_id, pnp_id, cert_data]:
+        ph.add_char(service_info_serv, char)
+    ph.add_char(sake_serv, sake_port)
+    
+    # call bluezero and let it start advertising, but on a different thread
+    thread = Thread(target = ph.publish)
     thread.start()
 
-    BLE.publish()
+    # but after it start our own advertising, since bluezero clears it (?) if we start it before
+    sleep(1)
+    pa.start_adv()
     
+
+    # just like in embedded :^)
+    logging.info("entering main loop...")
+    while True:
+        sleep(1)
+
     return
 
 if __name__ == "__main__":

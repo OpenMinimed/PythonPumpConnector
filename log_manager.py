@@ -19,7 +19,7 @@ class LogManager:
         root.handlers.clear()
         root.addHandler(handler)
 
-        logging.getLogger("bluezero.localGATT").setLevel(logging.INFO) # irregardless
+        #logging.getLogger("bluezero.localGATT").setLevel(logging.INFO) # irregardless
         cls._initialized = True
 
 

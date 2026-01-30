@@ -81,13 +81,13 @@ class PumpAdvertiser():
         return
 
     def on_connect_cb(self, device:Device):
-        self.logger.info(f"device {dev.address} connected!")
+        self.logger.info(f"device {device.address} connected!")
         self.connected = True
         self.stop_adv()
         return
 
-    def on_disconnect_cb(device:Device):
-        self.logger.warning(f"device {dev.address} disconnected!")
+    def on_disconnect_cb(self, device:Device):
+        self.logger.warning(f"device {device.address} disconnected!")
         self.connected = False
         self.start_adv()
         return

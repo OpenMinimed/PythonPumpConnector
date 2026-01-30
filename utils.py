@@ -155,8 +155,8 @@ def add_chars_and_services(ble, write_callback, notify_callback, mobile_name):
     return SAKE_SRV_ID, SAKE_CHR_ID # TODO: return the other ones + map them nicely??
 
 def exec(cmd:str) -> None:
-    subprocess.run(cmd, shell=True)
     logging.debug(f"executing: {cmd}")
+    subprocess.run(cmd, shell=True)
     return
 
 def parse_id_from_path(path: str) -> tuple[int, int]:
@@ -175,7 +175,7 @@ def parse_id_from_path(path: str) -> tuple[int, int]:
 
     return (service_id, char_id)
 
-def forget_pump_devices():
+def forget_pump_devices() -> None:
     """
     Forget all paired Bluetooth devices whose name starts with "Pump".
     Uses bluetoothctl CLI.
