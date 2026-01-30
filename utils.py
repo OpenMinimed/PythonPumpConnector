@@ -1,29 +1,21 @@
 import random
 import subprocess
 from time import sleep
+import sys
+import os
+import logging
+
+def add_submodule_to_path():
+    d = os.path.dirname(os.path.abspath(__file__))
+    d = os.path.join(d, "PythonSake")
+    if not os.path.isdir(d):
+        raise FileNotFoundError(f"you are missing the submodule checkout! please fix")
+    sys.path.append(d)
+    logging.debug(f"{d} was added to path")
+    return
 
 def advertise(mobile_name:str, instance_id:int=1) -> None:
     
-    subprocess.run("sudo btmgmt clr-adv", shell=True)
-
-    cmd = "02 01 02"  # flags
-    cmd += f" 12 FF F901 00 {mobile_name.encode().hex()} 00"  # manufacturer data
-    cmd += " 02 0A 01"  # tx power
-    cmd += " 03 03 82 FE"  # 16-bit service UUID
-
-    cmd = cmd.replace(" ", "")
-
-    full_cmd = f"sudo btmgmt add-adv -d {cmd} {instance_id}"
-    print("Running:", full_cmd)
-
-    try:
-        subprocess.run(full_cmd, shell=True, check=True)
-        sleep(4.8) # check nRF app to see advertisement delay & latency and tune it if needed
-    except KeyboardInterrupt:
-        print("Advertisement interrupted by user")
-    # except subprocess.CalledProcessError as e:
-    #     print(e)
-
     return
 
 def gen_mobile_name():
@@ -171,6 +163,11 @@ def batch_exec(cmd_list:list[str]) -> None:
         print(f"executing {c}")
         subprocess.run(c, shell=True)
         sleep(0.1)
+    return
+
+def exec(cmd:str) -> None:
+    subprocess.run(cmd, shell=True)
+    logging.debug(f"executing: {cmd}")
     return
 
 def parse_id_from_path(path: str) -> tuple[int, int]:

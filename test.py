@@ -2,17 +2,23 @@
 
 from bluezero import peripheral, adapter, advertisement
 from bluezero.broadcaster import Beacon
-from threading import Thread
 
+from threading import Thread
+import os
+from datetime import datetime
+from time import sleep
+
+import logging
+from log_manager import LogManager
+
+LogManager.init(level=logging.DEBUG)
 from utils import *
 
-STARTUP_COMMANDS = [
-    "sudo btmgmt power off",
-    "sudo btmgmt bredr off",
-    "sudo btmgmt le on",
-    "sudo btmgmt io-cap 3",
-    "sudo btmgmt power on"
-]
+add_submodule_to_path() # bit of hacking
+from pysake.handshake_client import HandshakeClient
+
+
+
 
 CONNECTED = False
 MOBILE_NAME = None
@@ -60,11 +66,87 @@ def write_callback(value, options):
     print("!!! WRITE", value)
 
 
+class PumpAdvertiser():
+
+    mobile_name:str = None
+    log:logging.Logger = None
+    instance_id:int = None
+    adv_started:datetime|None = None
+
+    startup_commands:list[str] = [
+        "sudo btmgmt power off",
+        "sudo btmgmt bredr off",
+        "sudo btmgmt le on",
+        "sudo btmgmt sc off",
+        "sudo btmgmt io-cap 3", # this is very important!
+        "sudo btmgmt power on"
+    ]
+
+    def __init__(self, instance_id:int=1):
+        """
+        instance id is the bluez instance id
+        """
+
+        self.instance_id = instance_id
+        self.logger = LogManager.get_logger(self.__class__.__name__)
+
+        self.logger.info("Enter sudo password if asked: (we need this for the low level btmgmt tool)")
+        exec("sudo echo 'Password entered'")
+
+        # gen a mobile name
+        self.mobile_name = gen_mobile_name()
+        self.logger.info(f"generated mobile name: {self.mobile_name}")
+        
+        self.__adv_clear_internal() # just to be on the safe side
+
+        # run btmgmt commands
+        for c in self.startup_commands:
+            exec(c)
+            sleep(0.1) # wait for hci to actually perform it. NOTE: make this delay larger if you see errors!
+
+        return
+
+    def __create_adv_cmd(self, time) -> str:
+
+        data = "02 01 06 "  # flags - we have turned BR/EDR off
+        data += f"12 FF F901 00 {self.mobile_name.encode().hex()} 00 "  # manufacturer data
+        data += "02 0A 01 "  # tx power
+        data += "03 03 82 FE "  # 16-bit service UUID
+
+        data = data.replace(" ", "")
+
+        # timeout is how long the bluez object lives (??)
+        # set duration and timeout to the same for now
+
+        full_cmd = f"sudo btmgmt add-adv -d {data} -t {time} -D {time} {self.instance_id}"
+        return full_cmd
+
+    def __adv_clear_internal(self):
+        exec("sudo btmgmt clr-adv")
+        return
+
+    def stop_adv(self) -> None:
+        self.__adv_clear_internal()
+        self.logger.info("advertising stopped")
+        self.adv_started = None
+        return
+
+    def start_adv(self, duration:int=360) -> None:
+        """
+        time is in seconds
+        """
+        cmd = self.__create_adv_cmd(duration)
+        exec(cmd)
+        self.adv_started = datetime.now()
+        self.logger.info(f"advertisement started at {self.adv_started}")
+        return
+
 def main():
     global MOBILE_NAME, BLE, SAKE_CHAR
 
-    MOBILE_NAME = gen_mobile_name()
-    print(f"using name: {MOBILE_NAME}")
+
+    pa = PumpAdvertiser()
+    pa.start_adv()
 
     print("\n\n")
     for i in range(5):
