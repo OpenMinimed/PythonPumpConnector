@@ -31,11 +31,9 @@ class PumpAdvertiser():
         "sudo btmgmt connectable on",
         "sudo btmgmt bondable on",
         "sudo btmgmt discov on",
-
-        "sudo btmgmt power on",
-        
         "sudo btmgmt io-cap 3", # this is very important!
-        "bluetoothctl agent NoInputNoOutput",
+        #"bluetoothctl agent NoInputNoOutput",
+        "sudo btmgmt power on",
     ]
 
     def __init__(self, instance_id:int=1):

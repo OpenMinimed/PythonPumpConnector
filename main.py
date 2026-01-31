@@ -32,10 +32,8 @@ def main():
     forget_pump_devices()
 
     # create stuff
-    pa = PumpAdvertiser()
     sh = SakeHandler()
-
-    # create the handler
+    pa = PumpAdvertiser()
     ph = PeripheralHandler()
     ph.set_on_connect(pa.on_connect_cb)
     ph.set_on_disconnect(pa.on_disconnect_cb)
@@ -58,12 +56,14 @@ def main():
     cert_data = BleChar("2A2A", "Certification Data List", bytes(0))
     sake_port = BleChar("0000FE82-0000-1000-0000-009132591325", "Sake Port", None, sh.notify_callback, sh.write_callback)
 
+    sh.set_char(sake_port)
+
     # add all chars
     for char in [mn, mn_model, sn, hw_rev, fw_rev, sw_rev, system_id, pnp_id, cert_data]:
         ph.add_char(service_info_serv, char)
     ph.add_char(sake_serv, sake_port)
    
-    # before calling bluezero, start advertising
+    # finally before calling bluezero, start our advertisement
     pa.start_adv()
     ph.publish()
 
