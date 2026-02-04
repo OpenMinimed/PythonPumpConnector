@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from utils import *
+add_submodule_to_path() # bit of hacking ;)
 
 from threading import Thread
 import os
@@ -8,9 +10,7 @@ import logging
 from log_manager import LogManager
 
 LogManager.init(level=logging.DEBUG)
-from utils import *
 
-add_submodule_to_path() # bit of hacking ;)
 
 
 from pump_advertiser import PumpAdvertiser
@@ -20,8 +20,8 @@ from sake_handler import SakeHandler
 def main():
 
     # check if bt is even on
-    if not get_bluetooth_running():
-        raise Exception("you need to have bluetooth running using systemctl!")
+    if not is_bluetooth_active():
+       raise Exception("you need to have bluetooth running!")
 
     # ask for pw
     logging.warning("Enter sudo password if asked: (we need this for the low level btmgmt tool)")

@@ -32,8 +32,8 @@ class PumpAdvertiser():
         "sudo btmgmt bondable on",
         "sudo btmgmt discov on",
         "sudo btmgmt io-cap 3", # this is very important!
-        #"bluetoothctl agent NoInputNoOutput",
         "sudo btmgmt power on",
+        # does not work: "sudo hciconfig noauth"
     ]
 
     def __init__(self, instance_id:int=1):
@@ -99,6 +99,8 @@ class PumpAdvertiser():
         self.logger.warning(f"device {device.address} connected!")
         self.connected = True
         self.stop_adv()
+        # does not work: exec(f"bluetoothctl trust {device.address}") # auto accept it (skip gui check)
+        
         return
 
     def on_disconnect_cb(self, device:Device):

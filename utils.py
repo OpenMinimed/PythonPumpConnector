@@ -54,12 +54,24 @@ def forget_pump_devices() -> None:
         logging.error(f"Error running bluetoothctl: {e}")
     return
 
-def get_bluetooth_running() -> bool:
+import subprocess
+
+def is_bluetooth_active() -> bool:
+    # Check if bluetoothd is running
+    proc = subprocess.run(
+        ["pidof", "bluetoothd"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    if proc.returncode != 0:
+        return False  # daemon not running
+
+    # Check if systemd service is active
     result = subprocess.run(
         ["systemctl", "is-active", "bluetooth"],
         capture_output=True,
-        text=True,
-        check=True
+        text=True
     )
-    status = result.stdout.strip()
-    return status == "active" 
+
+    return result.returncode == 0 and result.stdout.strip() == "active"
