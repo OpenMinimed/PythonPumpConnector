@@ -31,8 +31,7 @@ class SakeHandler:
         )
         self._cb_thread.start()
 
-        self.server = SakeServer(KEYDB_PUMP_HARDCODED)
-        #self.server = SakeServer(KEYDB_PUMP_EXTRACTED)
+        self.server = SakeServer(KEYDB_PUMP_EXTRACTED)
         return
 
     # region thread safe apis
