@@ -10,6 +10,19 @@ Currently only Linux is supported.
 ![screenshot](https://raw.githubusercontent.com/OpenMinimed/PythonPumpConnector/refs/heads/main/banner.png)
 
 
+## How to use
+
+The goal is to connect to a 700-series Medtronic pump from our own computer, just like Medtronic's MiniMed Mobile app does, but with no mobile phone and no Medtronic software involved. The connection is over Bluetooth LE, so you will need a computer that supports it.
+
+If your pump still lists a phone as connected device you have to remove that first because the pump can only connect to one "phone" at a time. On your pump, start the search for new devices to connect to. Then run `main.py` from this repository in a terminal. The script will choose a device name like "Mobile 123456" with a random number (i.e. it changes every time you run the script). It includes this name in its log output for reference and uses it to advertise as suitable Bluetooth LE device for the pump to connect to. Note that the script may ask you to input your password because the steps necessary to configure and run Bluetooth LE advertising typically need to be executed as superuser (using `sudo`).
+
+After a couple of seconds, the pump should have found the device and prompt you to connect to it. Confirming to connect should trigger a pairing request on your computer which you need to accept (see corresponding section below).
+
+Pump and script then spend another couple of seconds in GATT discovery after which the script finally initiates the SAKE handshake. See the script's log output in the terminal for details. Any problems during that process are also reported there.
+
+The script will currently simply restart the advertising after any problems in that process. You can stop it by pressing `Ctrl+C` in the terminal.
+
+
 ## Fixing ATT_MTU size
 
 After the pump connecting to our script, BlueZ seems to routinely send a request to increase the maximum allowed MTU size (`ATT_EXCHANGE_MTU_REQ`). The default MTU size is 23 bytes. The pump answers this request with a `ATT_EXCHANGE_MTU_RSP` indicating that it supports an MTU size of at most 184 bytes.
