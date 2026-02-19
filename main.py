@@ -3,19 +3,36 @@
 from utils import *
 add_submodule_to_path() # bit of hacking ;)
 
-from threading import Thread
-import os
-
 import logging
+import threading
+
 from log_manager import LogManager
-
 LogManager.init(level=logging.DEBUG)
-
-
 
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
+
+sh = SakeHandler()
+pa = PumpAdvertiser()
+ph = PeripheralHandler()
+
+def main_logic():
+
+    first = True
+
+    while True:
+
+        sleep(0.1)
+        if not sh.is_done():
+            continue
+    
+        if first:
+            logging.info("welcome from the main logic!")
+            first = False
+
+        # TODO: put some ipython here for testing or something
+    
 
 def main():
 
@@ -29,11 +46,6 @@ def main():
 
     # for now we need this hack, since if we did not create a sake connection, the device will forget it but our pc will not
     forget_pump_devices()
-
-    # create stuff
-    sh = SakeHandler()
-    pa = PumpAdvertiser()
-    ph = PeripheralHandler()
     
     ph.set_on_connect(pa.on_connect_cb)
     ph.set_on_disconnect(pa.on_disconnect_cb)
@@ -62,8 +74,16 @@ def main():
         ph.add_char(service_info_serv, char)
     ph.add_char(sake_serv, sake_port)
    
-    # finally before calling bluezero, start our advertisement
+    # finally before calling bluezero, start our advertisement and main logic thread
     pa.start_adv()
+
+    logic_thread = threading.Thread(
+        target=main_logic,
+        name="logic_thread",
+        daemon=True,
+    )
+    logic_thread.start()
+
     ph.publish()
 
     return

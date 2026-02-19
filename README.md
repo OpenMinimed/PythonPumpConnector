@@ -7,7 +7,20 @@ You can advertise, connect, perform the handshake and talk with a pump using thi
 
 Currently only Linux is supported.
 
+
 ![screenshot](https://raw.githubusercontent.com/OpenMinimed/PythonPumpConnector/refs/heads/main/banner.png)
+
+## Table of contents
+
+- [Table of contents](#table-of-contents)
+- [How to use](#how-to-use)
+- [Fixing ATT\_MTU size](#fixing-att_mtu-size)
+- [Fixing the Bluezero echo problem](#fixing-the-bluezero-echo-problem)
+- [IO capability](#io-capability)
+- [Pairing confirmation](#pairing-confirmation)
+- [Random failures](#random-failures)
+- [Debugging](#debugging)
+
 
 
 ## How to use
@@ -48,23 +61,27 @@ Tested and working versions:
 - Bluez 5.55 and 5.66
 
 
+## Fixing the Bluezero echo problem
+
+There is an echo bug (or feature?) in the Bluezero library, which causes the written data to be sent back on a characteristic. This is exactly the inverse of what we actually need, since we want to answer with the next handshake data instead. The fix is fairly simple and is highlighted in the [Bluezero #382 issue](https://github.com/ukBaz/python-bluezero/issues/382). You basically need to comment out the line <code>self.Set(constants.GATT_CHRC_IFACE, 'Value', value)</code> in the <code>WriteValue</code> function in <code>localGATT.py</code>. This was confirmed to be working on bluezero v0.9.1.
+
+
 ## IO capability
 
-Setting IO capability to 3 (<code>NoInputNoOutput</code>) is also very important, because the device asks for the MITM flag, but does not support LE Secure Connections. This makes the kernel default to the Just Works method and will not immediately reject the pairing request. This is performed automatically by the script.
+Setting IO capability to 3 (<code>NoInputNoOutput</code>) is also very important, because the device asks for the MITM flag, but does not support LE Secure Connections. This makes the kernel default to the *Just Works* method and will not immediately reject the pairing request. This is performed automatically by the script.
 
 
 ## Pairing confirmation
 
 By default, you will need to have a desktop client that handles the acceptance of pairing requests. Be ready for desktop notifications and quickly pressing accept on them!
 
-If you are running in a headless mode, then the kernel automatically rejects the pairing requests. One way we got this to work on the command line was by running `bluetoothctl --agent=NoInputNoOutput` in a separate terminal before starting `main.py`. `bluetoothctl` will then prompt for accepting/declining the pairing request in the terminal.
-
+If there is no client running, the kernel automatically rejects the pairing requests. One way we got this to work on the command line was by running `bluetoothctl --agent=NoInputNoOutput` in a separate terminal before starting `main.py`. `bluetoothctl` will then prompt for accepting/declining the pairing request in the terminal.
 
 ## Random failures
 
-Sometimes no BT traffic actually gets sent to the PC and we believe this is a GUI bug in the pump code. The workaround is very simple, just go back to the <code>Paired Devices > Pair New Device</code> menu and retry.
+Sometimes no BT traffic actually gets sent to the PC and the pairing does not even start. We believe this is a GUI bug in the pump code. The workaround is very simple, just go back to the <code>Paired Devices > Pair New Device</code> menu and retry. If you disable the BT adapter on your PC while the pump is waiting on a timeout, you can regain control of your pump's buttons faster.
 
 
 ## Debugging
 
-Use <code>btmon</code>. You can save a btsnoop file using the flag <code>-w</code>, that you can load with Wireshark later.
+Use <code>btmon</code>. You can also save a btsnoop file using the flag <code>-w</code>, that you can load with Wireshark later.

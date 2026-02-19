@@ -44,12 +44,17 @@ class SakeHandler:
     def _send(self, data: bytes):
         if self.char is None:
             raise RuntimeError("Sake char is none! You forgot to call set_char()!")
-        self.logger.debug(f"sake sending: {data.hex()}")
         self._sender_queue.put(data)
         return
+    
+    def is_done(self) -> bool:
+        return self.server.get_stage() == 6
 
     # region actual logic
     def _handle_notify(self, is_notifying: bool, char):
+
+        self.logger.debug(f"got a sake notification start/stop request!")
+        
         if self.char is None:
             self.logger.info(f"sake char is first seen as {char}")
             self.char = char
@@ -59,7 +64,7 @@ class SakeHandler:
             self.pump_enabled = True
             zeroes = bytes(20)
             self._send(zeroes) # trigger sake client on the pump
-            #self.server.handshake(zeroes) DONT feed it here!
+            # self.server.handshake(zeroes) DONT feed it here!
 
         if not is_notifying:
             self.pump_enabled = False
@@ -67,12 +72,13 @@ class SakeHandler:
 
     def _handle_write(self, value: bytes, options: dict):
         value = bytes(value)
-        # self.logger.info(
-        #     f"sake write callback received: {value.hex()} "
-        # )
+        self.logger.debug(f"sake write callback received: {value.hex()}")
         output = self.server.handshake(value)
-        #self.logger.info(f"sake server response calculated: {output.hex()}")
-        self._send(output)
+
+        if output is None and self.server.get_stage() == 6:
+            self.logger.info("SAKE HANDSHAKE IS DONE!!! CONGRATULATIONS!")
+        else:
+            self._send(output)
 
     # region slave threads
     def _thread_callback(self):
@@ -87,12 +93,10 @@ class SakeHandler:
 
                 if kind == "notify":
                     _, is_notifying, char = item
-                    self.logger.debug("got a sake notification!")
                     self._handle_notify(is_notifying, char)
 
                 elif kind == "write":
                     _, value, options = item
-                    self.logger.debug("got a sake write!")
                     self._handle_write(value, options)
 
                 else:
@@ -112,7 +116,7 @@ class SakeHandler:
                 continue
             try:
                 self.char.set_value(list(data))
-                #self.logger.info(f"sent data on sake port: {data.hex()}")
+                self.logger.debug(f"sent data on sake port: {data.hex()}")
             except Exception as e:
                 self.logger.exception(f"sake tx failed: {e}")
 
