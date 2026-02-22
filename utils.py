@@ -31,6 +31,7 @@ def forget_pump_devices() -> None:
     Forget all paired Bluetooth devices whose name starts with "Pump".
     Uses bluetoothctl CLI.
     """
+    input("We will forget all paired pumps! Do you want to continue? Press enter...")
     try:
         # Get list of paired devices
         result = subprocess.run(

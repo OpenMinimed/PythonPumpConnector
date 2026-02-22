@@ -5,6 +5,7 @@ add_submodule_to_path() # bit of hacking ;)
 
 import logging
 import threading
+import argparse
 
 from log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
@@ -13,9 +14,9 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 
-sh = SakeHandler()
-pa = PumpAdvertiser()
-ph = PeripheralHandler()
+ph:PeripheralHandler = None
+pa:PumpAdvertiser = None
+sh:SakeHandler = None
 
 def main_logic():
 
@@ -24,7 +25,8 @@ def main_logic():
     while True:
 
         sleep(0.1)
-        if not sh.is_done():
+        
+        if sh is None or not sh.is_done():
             continue
     
         if first:
@@ -36,6 +38,13 @@ def main_logic():
 
 def main():
 
+    # parse CLI args
+    parser = argparse.ArgumentParser(description="Python Pump Connector")
+    parser.add_argument('-p', '--advertise_paired',
+                        help='Mobile name to use if this device has already been paired with a pump. In a format of 6 number digits.',
+                        default=None)
+    args = parser.parse_args()
+
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
@@ -44,8 +53,19 @@ def main():
     logging.warning("Enter sudo password if asked: (we need this for the low level btmgmt tool)")
     exec("sudo echo")
 
-    # for now we need this hack, since if we did not create a sake connection, the device will forget it but our pc will not
-    forget_pump_devices()
+    sh = SakeHandler()
+    ph = PeripheralHandler()
+
+    # if user did not provide an already-paired name, start from fresh
+    if not args.advertise_paired:
+        forget_pump_devices()
+        mobile_name = None
+        paired = False
+    else:
+        mobile_name = "Mobile " + args.advertise_paired
+        paired = True
+
+    pa = PumpAdvertiser(mobile_name, paired)
     
     ph.set_on_connect(pa.on_connect_cb)
     ph.set_on_disconnect(pa.on_disconnect_cb)
