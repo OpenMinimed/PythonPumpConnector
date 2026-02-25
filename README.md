@@ -14,14 +14,13 @@ Currently only Linux is supported.
 
 - [Table of contents](#table-of-contents)
 - [How to use](#how-to-use)
+- [Prerequisites](#prerequisites)
 - [Fixing ATT\_MTU size](#fixing-att_mtu-size)
 - [Fixing the Bluezero echo problem](#fixing-the-bluezero-echo-problem)
 - [IO capability](#io-capability)
 - [Pairing confirmation](#pairing-confirmation)
 - [Random failures](#random-failures)
 - [Debugging](#debugging)
-
-
 
 ## How to use
 
@@ -35,6 +34,24 @@ Pump and script then spend another couple of seconds in GATT discovery after whi
 
 The script will currently simply restart the advertising after any problems in that process. You can stop it by pressing `Ctrl+C` in the terminal.
 
+## Prerequisites
+
+* Clone this repo with submodules
+	```sh
+	git clone --recurse-submodules git@github.com:OpenMinimed/PythonPumpConnector.git
+	```
+* Install system dependencies
+	```sh
+	# Ubuntu/Debian (untested)
+	sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev libcairo-gobject2
+
+	# Fedora (tested on 43)
+	sudo dnf install cairo-devel pkg-config python3-devel gobject-introspection-devel cairo-gobject-devel
+	```
+* Install Python dependencies
+	```sh
+	pip install -r requirements.txt
+	```
 
 ## Fixing ATT_MTU size
 
