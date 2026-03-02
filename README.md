@@ -19,6 +19,7 @@ Currently only Linux is supported.
 - [Fixing the Bluezero echo problem](#fixing-the-bluezero-echo-problem)
 - [IO capability](#io-capability)
 - [Pairing confirmation](#pairing-confirmation)
+- [Adjusting the advertising interval](#adjusting-the-advertising-interval)
 - [Random failures](#random-failures)
 - [Debugging](#debugging)
 
@@ -33,6 +34,9 @@ After a couple of seconds, the pump should have found the device and prompt you 
 Pump and script then spend another couple of seconds in GATT discovery after which the script finally initiates the SAKE handshake. See the script's log output in the terminal for details. Any problems during that process are also reported there.
 
 The script will currently simply restart the advertising after any problems in that process. You can stop it by pressing `Ctrl+C` in the terminal.
+
+If you stop the script after a successful SAKE handshake (thus terminating the BLE connection) and later want to reconnect to the pump without going through the whole pairing procedure again, you can call `main.py` with the  `-p` argument and pass it the random number that was used in the previous pairing step. Your pump should still show it as part of the device name it is currently connected to. This will handle the reconnect from the pump and also start another SAKE handshake.
+
 
 ## Prerequisites
 
@@ -93,6 +97,66 @@ Setting IO capability to 3 (<code>NoInputNoOutput</code>) is also very important
 By default, you will need to have a desktop client that handles the acceptance of pairing requests. Be ready for desktop notifications and quickly pressing accept on them!
 
 If there is no client running, the kernel automatically rejects the pairing requests. One way we got this to work on the command line was by running `bluetoothctl --agent=NoInputNoOutput` in a separate terminal before starting `main.py`. `bluetoothctl` will then prompt for accepting/declining the pairing request in the terminal.
+
+
+## Adjusting the advertising interval
+
+With BlueZ, most computers seem to be using a rather long default advertising interval of > 1 second, i.e. successive advertising packets are sent every second (or even less frequent). This does not seem to be a problem for the initial pairing step where the pump is instructed to look for advertising packets from a suitable device. Scanning for such a devices frequently is rather energy-heavy, but it makes sure the device is found quickly.
+
+If both communication partners are later disconnected (devices are too far apart, Bluetooth is temporarily disabled etc.), the pump tries to reconnect. But since it does not know if the other side is gone for long, it does not make sense for the pump to spend lots of its battery power on scanning for the partner in short intervals. If our advertising packets are sent only every second or so, chances are high that the pump will miss them if it only scans for them every couple of seconds, too.
+
+Please note that we do not know if the pump actually behaves that way (it is not trivial to measure when and how often the pump is actually scanning), but it would make sense for a battery-powered device. Also, we could not get reconnects to work with long advertising intervals. However, reconnects work reliably when using a short advertising interval.
+
+Setting a shorter advertising interval seems to be more complicated than it needs to be. So far, the only way we could get this to work was through debugfs. This requires, first of all, a kernel built with `CONFIG_BT_DEBUGFS=y`. Check your kernel config (typically in `/boot/config-$(uname -r)` to see if this option is set. Then set the advertising interval by writing the following two values:
+
+```sh
+echo 50 > /sys/kernel/debug/bluetooth/hci0/adv_min_interval
+echo 50 > /sys/kernel/debug/bluetooth/hci0/adv_max_interval
+```
+
+Assuming that their inital value is something like 2048, make sure to first change the _min_ value, then the _max_ value, just as above. The write operation will throw an error otherwise because _min_ must apparently never be greater than _max_.
+
+Note writing these value might not work and you get _operation failed_ or something like that in response. If that is the case, check if kernel lockdown is enabled:
+
+```sh
+echo /sys/kernel/security/lockdown
+```
+
+If anything else than `none` is selected, you probably need to disable Secure Boot in your BIOS/EFI settings.
+
+The actual advertising interval is computed by multiplying the value in `adv_min_interval` or `adv_max_interval` by 0.625 ms. You can check the output of `btmon` to verify the correct interval is used. It will look something like this if `main.py` starts the advertising:
+
+```
+@ MGMT Command: Add Advertising (0x003e) plen 40                       {0x0002} [hci0] 5.832981
+        Instance: 1
+        Flags: 0x00000000
+        Duration: 5
+        Timeout: 5
+        Advertising data length: 29
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+        Company: Medtronic Inc. (505)
+          Data: 004d6f62696c652039343330393300
+        TX power: 1 dBm
+        16-bit Service UUIDs (complete): 1 entry
+          Medtronic Inc. (0xfe82)
+        Scan response length: 0
+@ MGMT Event: Advertising Added (0x0023) plen 1                        {0x0001} [hci0] 5.832987
+        Instance: 1
+< HCI Command: LE Set Advertising Parameters (0x08|0x0006) plen 15           #3 [hci0] 5.833017
+        Min advertising interval: 31.250 msec (0x0032)
+        Max advertising interval: 31.250 msec (0x0032)
+        Type: Connectable undirected - ADV_IND (0x00)
+        Own address type: Public (0x00)
+        Direct address type: Public (0x00)
+        Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+        Channel map: 37, 38, 39 (0x07)
+        Filter policy: Allow Scan Request from Any, Allow Connect Request from Any (0x00)
+```
+
+Note that this adjustment is only necessary for _reconnects_. The initial connection and pairing seems to work just fine with the long default advertising intervals. So if you have trouble changing the interval on your machine and only want to the get the initial connection to the pump going, do not (yet) waste your time with this adjustment.
+
 
 ## Random failures
 
