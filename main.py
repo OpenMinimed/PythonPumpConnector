@@ -7,6 +7,8 @@ import logging
 import threading
 import argparse
 
+from bluezero import adapter
+
 from log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
 
@@ -43,6 +45,8 @@ def main():
     parser.add_argument('-p', '--advertise_paired',
                         help='Mobile name to use if this device has already been paired with a pump. In a format of 6 number digits.',
                         default=None)
+    parser.add_argument('-a', '--adapter-address',
+        help='MAC address of the Bluetooth adapter to use')
     args = parser.parse_args()
 
     # check if bt is even on
@@ -53,8 +57,14 @@ def main():
     logging.warning("Enter sudo password if asked: (we need this for the low level btmgmt tool)")
     exec("sudo echo")
 
+    if args.adapter_address:
+        adapter_addr = args.adapter_address
+    else:
+        # use first Bluetooth adapter found
+        adapter_addr = next(adapter.Adapter.available()).address
+
     sh = SakeHandler()
-    ph = PeripheralHandler()
+    ph = PeripheralHandler(adapter_addr)
 
     # if user did not provide an already-paired name, start from fresh
     if not args.advertise_paired:

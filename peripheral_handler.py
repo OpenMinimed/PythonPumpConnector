@@ -1,7 +1,7 @@
 from log_manager import LogManager
 import logging
 
-from bluezero import peripheral, adapter
+from bluezero import peripheral
 
 class BleService:
 
@@ -50,10 +50,10 @@ class PeripheralHandler():
     services:dict[int, BleService] = {}
     chars:dict[int, BleChar] = {}
 
-    def __init__(self):
+    def __init__(self, adapter_addr):
 
         self.logger = LogManager().get_logger(self.__class__.__name__)
-        self.adapter_addr = list(adapter.Adapter.available())[0].address
+        self.adapter_addr = adapter_addr
         self.logger.debug(f"using local adapter: {self.adapter_addr}")
 
         self.periph = peripheral.Peripheral(
