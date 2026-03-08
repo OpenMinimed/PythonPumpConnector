@@ -40,6 +40,8 @@ def main_logic():
 
 def main():
 
+    global sh
+
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
     parser.add_argument('-p', '--advertise_paired',
