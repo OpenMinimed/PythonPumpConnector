@@ -114,9 +114,9 @@ echo 50 > /sys/kernel/debug/bluetooth/hci0/adv_min_interval
 echo 50 > /sys/kernel/debug/bluetooth/hci0/adv_max_interval
 ```
 
-Assuming that their inital value is something like 2048, make sure to first change the _min_ value, then the _max_ value, just as above. The write operation will throw an error otherwise because _min_ must apparently never be greater than _max_.
+Assuming that their inital value is something large (like 2048), make sure to first change the _min_ value, then the _max_ value, just as above. The write operation will throw an error otherwise because _min_ must apparently never be greater than _max_.
 
-Note writing these value might not work and you get _operation failed_ or something like that in response. If that is the case, check if kernel lockdown is enabled:
+Note that writing these values might not work and you get _operation failed_ or something like that in response. If that is the case, check if kernel lockdown is enabled:
 
 ```sh
 echo /sys/kernel/security/lockdown
