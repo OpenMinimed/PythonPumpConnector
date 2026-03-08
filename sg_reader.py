@@ -20,9 +20,14 @@ class SGReader:
     a final response on the Record Access Control Point which indicates
     whether the operation succeeded or not.
 
+    The pump SAKE-encrypts the CGM Measurement data. The Record Access
+    Control Point does not use any encryption though.
+
     Note that is very hackish and is intended to do one very specific
     thing only. We may very much want to throw this away and completely
     rewrite the approach for use in some actual production code.
+
+    TODO: SAKE-decrypt received CGM Measurement payload
     """
 
     def __init__(self, central:Central):
@@ -68,21 +73,27 @@ class SGReader:
         #
         # see https://www.bluetooth.com/de/specifications/gss/,
         # section 3.43 CGM Measurement
-        length = len(self.record)
+        #
+        # TODO: This payload is SAKE-encrypted. Decrypt it!
+        print("!!! TODO: SAKE-decrypt CGM Measurement payload !!!")
+        """
+        data = SAKE-decrypted self.record
+        length = len(data)
         if length < 6:
             self.logger.error("Record too short, wanted at least 6 bytes, got %d"
                 % length)
             return None
-        if length != self.record[0]:
+        if length != data[0]:
             self.logger.error("Record length %d does not match length field %d"
-                % (length, self.record[0]))
+                % (length, data[0]))
             return None
-        flags         = self.record[1]
-        concentration = self.as_f16(int.from_bytes(self.record[2:4], "little"))
-        offset        = int.from_bytes(self.record[4:6], "little")
+        flags         = data[1]
+        concentration = self.as_f16(int.from_bytes(data[2:4], "little"))
+        offset        = int.from_bytes(data[4:6], "little")
         print(f"Flags:                     {flags:08b}")
         print(f"CGM Glucose Concentration: {concentration} mg/dL")
         print(f"Time Offset:               {offset} min")
+        """
 
         # parse received response
         #
