@@ -8,6 +8,8 @@ import threading
 import argparse
 
 from bluezero import adapter
+from bluezero.device import Device
+from bluezero.central import Central
 
 from log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
@@ -15,10 +17,14 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
+from sg_reader import SGReader
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
+
+device:Device = None
+
 
 def main_logic():
 
@@ -28,12 +34,25 @@ def main_logic():
 
         sleep(0.1)
         
+        # SAKE handshake must have been completed
         if sh is None or not sh.is_done():
             continue
-    
+
+        # connection to pump must have been established
+        # GATT discovery must have been completed
+        if not device or not device.services_resolved:
+            continue
+
         if first:
             logging.info("welcome from the main logic!")
             first = False
+            assert device.services_resolved
+
+            pump = Central(device.address, device.adapter)
+            pump.load_gatt()
+
+            sg_reader = SGReader(pump)
+            sg = sg_reader.get_value()
 
         # TODO: put some ipython here for testing or something
     
@@ -79,7 +98,12 @@ def main():
 
     pa = PumpAdvertiser(mobile_name, paired)
     
-    ph.set_on_connect(pa.on_connect_cb)
+    def on_connect(dev:Device):
+        global device
+        device = dev
+        pa.on_connect_cb(dev)
+
+    ph.set_on_connect(on_connect)
     ph.set_on_disconnect(pa.on_disconnect_cb)
 
     # create the services
@@ -122,3 +146,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
