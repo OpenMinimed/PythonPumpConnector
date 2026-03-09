@@ -6,6 +6,7 @@ add_submodule_to_path() # bit of hacking ;)
 import logging
 import threading
 import argparse
+import time
 
 from bluezero import adapter
 from bluezero.device import Device
@@ -22,13 +23,13 @@ from sg_reader import SGReader
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
-
 device:Device = None
-
 
 def main_logic():
 
     first = True
+    sg_reader: SGReader = None
+    last_read = time.monotonic()
 
     while True:
 
@@ -52,14 +53,23 @@ def main_logic():
             pump.load_gatt()
 
             sg_reader = SGReader(pump)
-            sg = sg_reader.get_value()
+            logging.debug("sg reader created")
+        
+        # try to read the SG every minute
+        if time.monotonic() - last_read > 60 and sg_reader is not None:
+            last_read += 60
+            try:
+                sg = sg_reader.get_value(sh)
+                logging.info(f"read sg = {sg}")
+            except Exception as e:
+                logging.error(f"failed to read sg: {e}")
 
         # TODO: put some ipython here for testing or something
     
 
 def main():
 
-    global sh
+    global ph, pa, sh, device
 
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")

@@ -6,6 +6,10 @@ import time
 
 from log_manager import LogManager
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sake_handler import SakeHandler
 
 UUID_CGM_SERVICE      = "0000181f-0000-1000-8000-00805f9b34fb"
 UUID_MEASUREMENT_CHAR = "00002aa7-0000-1000-8000-00805f9b34fb"
@@ -27,7 +31,6 @@ class SGReader:
     thing only. We may very much want to throw this away and completely
     rewrite the approach for use in some actual production code.
 
-    TODO: SAKE-decrypt received CGM Measurement payload
     """
 
     def __init__(self, central:Central):
@@ -39,13 +42,13 @@ class SGReader:
 
         self.measurement_received = threading.Event()
         self.operation_finished   = threading.Event()
-        self.record   = None
+        self.record:bytearray   = None
         self.response = None
 
         success = self._configure_characteristics()
         assert success == True
 
-    def get_value(self):
+    def get_value(self, sh:"SakeHandler", timeout:int=3) -> float | None:
         self.measurement_received = threading.Event()
 
         self.logger.info("Requesting last stored record")
@@ -53,14 +56,12 @@ class SGReader:
         # Op Code:  0x01 (Report Stored Records)
         # Operator: 0x06 (Last Record)
         self.cgm_racp.write_value([0x01, 0x06])
-
-        # TODO: Fix this logic. We may only receive a (negative)
-        #       response on RACP and no CGM measurement at all. Also,
-        #       use some sane timeouts.
-        if self.measurement_received.wait(timeout=None):
+   
+        # wait for a response
+        if self.measurement_received.wait(timeout=timeout):
             self.logger.debug("Measurement received")
-            self.operation_finished = threading.Event()
-            if self.operation_finished.wait(timeout=None):
+
+            if self.operation_finished.wait(timeout=timeout):
                 self.logger.debug("Operation finished")
             else:
                 self.logger.error("Timeout while waiting for operation to finish")
@@ -69,15 +70,12 @@ class SGReader:
             self.logger.error("Timeout while waiting for measurement")
             return None
 
+        # decrypt the record
+        data = sh.server.session.server_crypt.decrypt(bytes(self.record))
+
         # parse received record
-        #
-        # see https://www.bluetooth.com/de/specifications/gss/,
-        # section 3.43 CGM Measurement
-        #
-        # TODO: This payload is SAKE-encrypted. Decrypt it!
-        print("!!! TODO: SAKE-decrypt CGM Measurement payload !!!")
-        """
-        data = SAKE-decrypted self.record
+        #   see https://www.bluetooth.com/de/specifications/gss/,
+        #   section 3.43 CGM Measurement
         length = len(data)
         if length < 6:
             self.logger.error("Record too short, wanted at least 6 bytes, got %d"
@@ -87,13 +85,13 @@ class SGReader:
             self.logger.error("Record length %d does not match length field %d"
                 % (length, data[0]))
             return None
+        
         flags         = data[1]
         concentration = self.as_f16(int.from_bytes(data[2:4], "little"))
         offset        = int.from_bytes(data[4:6], "little")
-        print(f"Flags:                     {flags:08b}")
-        print(f"CGM Glucose Concentration: {concentration} mg/dL")
-        print(f"Time Offset:               {offset} min")
-        """
+        self.logger.debug(f"Flags:                     {flags:08b}")
+        self.logger.debug(f"CGM Glucose Concentration: {concentration} mg/dL")
+        self.logger.debug(f"Time Offset:               {offset} min")
 
         # parse received response
         #
@@ -109,8 +107,10 @@ class SGReader:
         if self.response != bytearray([6,0,1,1]):
             self.logger.error("Unexpected response")
 
+        return float(concentration)
+
     @staticmethod
-    def as_f16(value):
+    def as_f16(value) -> int | float:
         e = (value & 0xf000) >> 12
         m = (value & 0x0fff)
         if e & 0x8:
@@ -129,6 +129,7 @@ class SGReader:
                 time.sleep(0.2)
             assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
             self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
+            self.logger.debug("measurement_cb added")
             self.cgm_measurement.start_notify()
         except Exception as e:
             self.logger.error("Failed to add characteristic CGM Measurement")
@@ -145,6 +146,7 @@ class SGReader:
             assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
             assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
             self.cgm_racp.add_characteristic_cb(self._racp_cb)
+            self.logger.debug("racp_cb added")
             self.cgm_racp.start_notify()
         except Exception as e:
             self.logger.error("Failed to add characteristic RACP")
