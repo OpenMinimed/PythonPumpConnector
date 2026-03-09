@@ -118,6 +118,11 @@ class SGReader:
         if m & 0x800:
             m = m - 0x1000
         return m * 10**e
+    
+    @staticmethod
+    def mgdl_to_mmolL(value_mgdl):
+        molar_mass = 180.156
+        return (value_mgdl * 10) / molar_mass
 
     def _configure_characteristics(self):
         try:

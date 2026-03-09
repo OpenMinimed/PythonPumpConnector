@@ -60,7 +60,7 @@ def main_logic():
             last_read += 60
             try:
                 sg = sg_reader.get_value(sh)
-                logging.info(f"read sg = {sg}")
+                logging.info(f"read sg = {sg} ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
             except Exception as e:
                 logging.error(f"failed to read sg: {e}")
 
