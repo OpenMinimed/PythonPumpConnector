@@ -107,7 +107,7 @@ If both communication partners are later disconnected (devices are too far apart
 
 Please note that we do not know if the pump actually behaves that way (it is not trivial to measure when and how often the pump is actually scanning), but it would make sense for a battery-powered device. Also, we could not get reconnects to work with long advertising intervals. However, reconnects work reliably when using a short advertising interval.
 
-Setting a shorter advertising interval seems to be more complicated than it needs to be. So far, the only way we could get this to work was through debugfs. This requires, first of all, a kernel built with `CONFIG_BT_DEBUGFS=y`. Check your kernel config (typically in `/boot/config-$(uname -r)` to see if this option is set. Then set the advertising interval by writing the following two values:
+Setting a shorter advertising interval seems to be more complicated than it needs to be. So far, the only way we could get this to work was through debugfs. This requires, first of all, a kernel built with `CONFIG_BT_DEBUGFS=y`. Check your kernel config (typically `cat /boot/config-$(uname -r)` to see if this option is set. Then set the advertising interval by writing the following two values:
 
 ```sh
 echo 50 > /sys/kernel/debug/bluetooth/hci0/adv_min_interval
@@ -119,7 +119,7 @@ Assuming that their inital value is something large (like 2048), make sure to fi
 Note that writing these values might not work and you get _operation failed_ or something like that in response. If that is the case, check if kernel lockdown is enabled:
 
 ```sh
-echo /sys/kernel/security/lockdown
+cat /sys/kernel/security/lockdown
 ```
 
 If anything else than `none` is selected, you probably need to disable Secure Boot in your BIOS/EFI settings.
