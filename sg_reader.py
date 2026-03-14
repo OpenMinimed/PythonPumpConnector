@@ -4,6 +4,7 @@ from bluezero.central import Central
 import threading
 import time
 
+from cgm_measurement import CGMMeasurement
 from log_manager import LogManager
 
 from typing import TYPE_CHECKING
@@ -74,24 +75,16 @@ class SGReader:
         data = sh.server.session.server_crypt.decrypt(bytes(self.record))
 
         # parse received record
-        #   see https://www.bluetooth.com/de/specifications/gss/,
-        #   section 3.43 CGM Measurement
-        length = len(data)
-        if length < 6:
-            self.logger.error("Record too short, wanted at least 6 bytes, got %d"
-                % length)
+        #
+        # TODO: For simplicity, we hard-code use of the E2E-CRC for now
+        #       because the 780G always seems to have that enabled. The value
+        #       should be read from th CGM Feature characteristic instead.
+        measurement_record = CGMMeasurement(data, use_crc=True)
+        if measurement_record.parse():
+            self.logger.debug(measurement_record)
+        else:
+            self.logger.error("Failed to parse measurement record")
             return None
-        if length != data[0]:
-            self.logger.error("Record length %d does not match length field %d"
-                % (length, data[0]))
-            return None
-        
-        flags         = data[1]
-        concentration = self.as_f16(int.from_bytes(data[2:4], "little"))
-        offset        = int.from_bytes(data[4:6], "little")
-        self.logger.debug(f"Flags:                     {flags:08b}")
-        self.logger.debug(f"CGM Glucose Concentration: {concentration} mg/dL")
-        self.logger.debug(f"Time Offset:               {offset} min")
 
         # parse received response
         #
@@ -107,7 +100,7 @@ class SGReader:
         if self.response != bytearray([6,0,1,1]):
             self.logger.error("Unexpected response")
 
-        return float(concentration)
+        return float(measurement_record.glucose)
 
     @staticmethod
     def as_f16(value) -> int | float:
