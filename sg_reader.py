@@ -79,6 +79,7 @@ class SGReader:
         # TODO: For simplicity, we hard-code use of the E2E-CRC for now
         #       because the 780G always seems to have that enabled. The value
         #       should be read from th CGM Feature characteristic instead.
+        self.logger.debug(f"read raw cgm measurement = {data.hex()}")
         measurement_record = CGMMeasurement(data, use_crc=True)
         if measurement_record.parse():
             self.logger.debug(measurement_record)
@@ -115,7 +116,7 @@ class SGReader:
     @staticmethod
     def mgdl_to_mmolL(value_mgdl):
         molar_mass = 180.156
-        return (value_mgdl * 10) / molar_mass
+        return round((value_mgdl * 10) / molar_mass, 2)
 
     def _configure_characteristics(self):
         try:

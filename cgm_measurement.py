@@ -164,7 +164,7 @@ class CGMMeasurement:
 if __name__ == "__main__":
     LogManager.init(level=logging.DEBUG)
 
-    data = bytes.fromhex("0ec3f900f40b000074e00a00e0f1")
+    data = bytes.fromhex("0ec3f900f40b000074e00a00e0f1") # another for testing: 0ec38d00e803000010e00a00d9af
     m = CGMMeasurement(data, use_crc=True)
     if m.parse():
         print(m)
