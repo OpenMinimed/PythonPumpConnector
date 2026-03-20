@@ -73,6 +73,11 @@ class SakeHandler:
     def _handle_write(self, value: bytes, options: dict):
         value = bytes(value)
         self.logger.debug(f"sake write callback received: {value.hex()}")
+        
+        if self.server.get_stage() == 6:
+            self.logger.warning(f"preventing sake-reset to get into handshake steps!")
+            return
+
         output = self.server.handshake(value)
 
         if output is None and self.server.get_stage() == 6:

@@ -116,7 +116,7 @@ class SGReader:
     @staticmethod
     def mgdl_to_mmolL(value_mgdl):
         molar_mass = 180.156
-        return round((value_mgdl * 10) / molar_mass, 2)
+        return round((value_mgdl * 10) / molar_mass, 1)
 
     def _configure_characteristics(self):
         try:

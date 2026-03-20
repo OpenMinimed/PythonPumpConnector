@@ -19,7 +19,7 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 from sg_reader import SGReader
-# from socp import SocpController
+from socp import SocpController
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
@@ -56,8 +56,8 @@ def main_logic():
             sg_reader = SGReader(pump)
             logging.debug("sg reader created")
 
-            #socpc = SocpController(pump)
-            #logging.debug("SocpController created")
+            socpc = SocpController(pump)
+            logging.debug("SocpController created")
 
         
         # try to read the SG every minute
@@ -66,7 +66,7 @@ def main_logic():
             try:
                 sg = sg_reader.get_value(sh)
                 logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
-                #socpc.trigger_session_id(sh)
+                socpc.trigger_session_id(sh)
 
             except Exception as e:
                 logging.error(f"failed to read sg: {e}")
