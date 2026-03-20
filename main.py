@@ -19,6 +19,7 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 from sg_reader import SGReader
+# from socp import SocpController
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
@@ -29,7 +30,7 @@ def main_logic():
 
     first = True
     sg_reader: SGReader = None
-    last_read = time.monotonic()
+    last_read = None
 
     while True:
 
@@ -54,13 +55,19 @@ def main_logic():
 
             sg_reader = SGReader(pump)
             logging.debug("sg reader created")
+
+            #socpc = SocpController(pump)
+            #logging.debug("SocpController created")
+
         
         # try to read the SG every minute
-        if time.monotonic() - last_read > 60 and sg_reader is not None:
-            last_read += 60
+        if (last_read is None or time.monotonic() - last_read > 60) and sg_reader is not None:
+            last_read = time.monotonic()
             try:
                 sg = sg_reader.get_value(sh)
                 logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
+                #socpc.trigger_session_id(sh)
+
             except Exception as e:
                 logging.error(f"failed to read sg: {e}")
 
@@ -83,6 +90,9 @@ def main():
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
+    
+    if not bt_privacy_on():
+        raise Exception("BT privacy does not seem to be on. You need to manually edit /etc/bluetooth/main.conf and add 'Privacy = device' under [General]. After that, restart the bluethoothd service and re-pair on your pump!")
 
     # ask for pw
     logging.warning("Enter sudo password if asked: (we need this for the low level btmgmt tool)")

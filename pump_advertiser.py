@@ -19,7 +19,8 @@ class PumpAdvertiser():
     adv_started:datetime|None = None
     sleep_delay:int = 0.5 # this needs to be very high, since it can SILENTLY DROP COMMANDS!!! debugging this was a fucking pain. state of linux bluetooth in 2026 everyone
     connected:bool = False
-    adv_time:int = 5 # sec
+    fake_adv_time:int = 5 # in sec. this is passed down to the OS
+    adv_thread_time:float = 4.9 # the real value we let the advertisement packets live
     already_paired:bool
 
     startup_commands:list[str] = [
@@ -33,7 +34,7 @@ class PumpAdvertiser():
         "sudo btmgmt discov on",
         "sudo btmgmt io-cap 3", # this is very important!
         "sudo btmgmt power on",
-        # does not work: "sudo hciconfig noauth"
+        # DOES NOT WORK, NEEDS CONFIG WORKAROUND!!!: "sudo btmgmt privacy device"
     ]
 
     def __is_valid_mobile(self, s: str) -> bool:
@@ -49,6 +50,9 @@ class PumpAdvertiser():
         self.instance_id = instance_id
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self.already_paired = already_paired
+
+        if already_paired:
+            self.adv_thread_time = 0.1 # lower it very much, since if we spam it we can get down under the 1s+ default without any extra effort
 
         # apply a mobile name
         if mobile_name is not None:
@@ -84,7 +88,7 @@ class PumpAdvertiser():
         # timeout is how long the bluez object lives (??)
         # set duration and timeout to the same for now, idk
 
-        full_cmd = f"sudo btmgmt add-adv -d {data} -t {self.adv_time} -D {self.adv_time} {self.instance_id}"
+        full_cmd = f"sudo btmgmt add-adv -d {data} -t {self.fake_adv_time} -D {self.fake_adv_time} {self.instance_id}"
         return full_cmd
 
     def __clear_adv(self):
@@ -131,7 +135,7 @@ class PumpAdvertiser():
                 return
             cmd = self.__create_adv_cmd()
             exec(cmd)
-            sleep(self.adv_time)
+            sleep(self.adv_thread_time)
             self.__clear_adv()
 
     # def __get_advertisement_count(self):

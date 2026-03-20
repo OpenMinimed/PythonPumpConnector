@@ -69,3 +69,24 @@ def is_bluetooth_active() -> bool:
             pass
 
     return False
+
+def bt_privacy_on() -> bool:
+    """
+    Check if BT privacy is enabled
+    """
+    result = subprocess.run(
+        ["btmgmt", "info"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+
+    lines = result.stdout.splitlines()
+
+    privacy_enabled = False
+    for line in lines:
+        if "current settings" in line and "privacy" in line:
+            privacy_enabled = True
+            break
+
+    return privacy_enabled
