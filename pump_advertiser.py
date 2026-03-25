@@ -52,7 +52,7 @@ class PumpAdvertiser():
         self.already_paired = already_paired
 
         if already_paired:
-            self.adv_thread_time = 0.1 # lower it very much, since if we spam it we can get down under the 1s+ default without any extra effort
+            self.adv_thread_time = 0.05 # lower it very much, since if we spam it we can get down under the 1s+ default without any extra effort
 
         # apply a mobile name
         if mobile_name is not None:

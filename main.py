@@ -31,6 +31,7 @@ def main_logic():
     first = True
     sg_reader: SGReader = None
     last_read = None
+    read_seconds = 1
 
     while True:
 
@@ -61,15 +62,31 @@ def main_logic():
 
         
         # try to read the SG every minute
-        if (last_read is None or time.monotonic() - last_read > 60) and sg_reader is not None:
+        if (last_read is None or time.monotonic() - last_read > read_seconds) and sg_reader is not None:
             last_read = time.monotonic()
+
+            for i in range(3):
+                try:
+                    sg = sg_reader.get_value(sh, timeout=10)
+                    if sg is not None:
+                        logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
+                except Exception as e:
+                    logging.error(f"failed to read sg: {e}")
+            #    time.sleep(2)
+
+
             try:
-                sg = sg_reader.get_value(sh)
-                logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
+                pass
+             #   time.sleep(1)
                 socpc.trigger_session_id(sh)
+                #sg = sg_reader.get_value(sh)
+                #logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
 
             except Exception as e:
-                logging.error(f"failed to read sg: {e}")
+                logging.error(f"failed to read socpc: {e}")
+
+
+
 
         # TODO: put some ipython here for testing or something
     
