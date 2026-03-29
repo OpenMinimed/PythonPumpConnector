@@ -18,6 +18,8 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
+
+from history_reader import HistoryReader
 from sg_reader import SGReader
 # from socp import SocpController
 
@@ -53,23 +55,12 @@ def main_logic():
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            sg_reader = SGReader(pump)
-            logging.debug("sg reader created")
-
-            #socpc = SocpController(pump)
-            #logging.debug("SocpController created")
-
-        
-        # try to read the SG every minute
-        if (last_read is None or time.monotonic() - last_read > 60) and sg_reader is not None:
-            last_read = time.monotonic()
-            try:
-                sg = sg_reader.get_value(sh)
-                logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
-                #socpc.trigger_session_id(sh)
-
-            except Exception as e:
-                logging.error(f"failed to read sg: {e}")
+            history_reader = HistoryReader(pump)
+            history = history_reader.get_records(sh)
+            if history is not None:
+                # dump raw records
+                for r in history:
+                    print(r.data.hex())
 
         # TODO: put some ipython here for testing or something
     
