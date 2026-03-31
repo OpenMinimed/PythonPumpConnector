@@ -76,8 +76,6 @@ class SocpController:
                 + str(dbus_tools.dbus_to_python(changed_props)))
             self.last_value = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
             self.logger.debug(f"last_value = {self.last_value.hex()}")
-        else:
-            self.logger.error(f"no 'Value' in changed_props: {changed_props}")
 
 
 
