@@ -66,12 +66,15 @@ class SocpController:
         ciph = sh.server.session.server_crypt.encrypt(req)
         self.logger.debug(f"writing {req.hex()} (encrypted: {ciph.hex()}) to scp...")
        
+        # TODO: This triggers false warnings at the moment. If we want to keep
+        #       this for debugging, we should fix the client_crypt.
+        #
         # NOTE: if you send wrongly encrypted data here, you will get 20 zero bytes on sake char. if you dont re-handshake in 5seconds you will get a disconnect???
-        try:
-            dec = sh.server.session.client_crypt.decrypt(ciph)
-            self.logger.debug(f"client decrypted = {dec.hex()}")
-        except Exception as e:
-            self.logger.warning(f"client dec failed! {e}")
+        #try:
+        #    dec = sh.server.session.client_crypt.decrypt(ciph)
+        #    self.logger.debug(f"client decrypted = {dec.hex()}")
+        #except Exception as e:
+        #    self.logger.warning(f"client dec failed! {e}")
 
         self.socp_char.write_value(list(ciph))
         return
