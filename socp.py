@@ -72,10 +72,8 @@ class SocpController:
 
     def _socp_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:
-            self.logger.debug("SOCP callback: "
-                + str(dbus_tools.dbus_to_python(changed_props)))
             self.last_value = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
-            self.logger.debug(f"last_value = {self.last_value.hex()}")
+            self.logger.debug("SOCP callback: " + self.last_value.hex())
 
 
 
