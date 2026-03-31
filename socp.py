@@ -56,6 +56,8 @@ class SocpController:
         crc = crc.to_bytes(2, "little")
         req = req + crc
         
+        # Op Code: 0x90   (Get Sensor Details)
+        # E2E-CRC: 0x6249
         req = bytes.fromhex("904962")
         ciph = sh.server.session.server_crypt.encrypt(req)
         self.logger.debug(f"writing {req.hex()} (encrypted: {ciph.hex()}) to scp...")
