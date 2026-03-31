@@ -156,15 +156,13 @@ class SGReader:
 
     def _racp_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:
-            self.logger.debug("CGM RACP indication: "
-                + str(dbus_tools.dbus_to_python(changed_props)))
             self.response = dbus_tools.dbus_to_python(changed_props["Value"])
+            self.logger.debug("CGM RACP indication: " + self.response.hex())
             self.operation_finished.set()
 
     def _measurement_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:
-            self.logger.debug("CGM Measurement notification: "
-                + str(dbus_tools.dbus_to_python(changed_props)))
             self.record = dbus_tools.dbus_to_python(changed_props["Value"])
+            self.logger.debug("CGM Measurement notification: " + self.record.hex())
             self.measurement_received.set()
 
