@@ -34,6 +34,8 @@ class SocpController:
         self.last_value:bytes   = None
         #self.response = None
 
+        self.sh = None
+
         #success = self._configure_characteristics()
         #assert success == True
         self.logger.debug("Adding SOCP char")
@@ -51,6 +53,8 @@ class SocpController:
         return
 
     def trigger_session_id(self, sh:"SakeHandler"):
+        self.sh = sh
+
         req = bytes([0x8c])
         crc = CGMMeasurement.e2e_crc(req)
         crc = crc.to_bytes(2, "little")
@@ -77,6 +81,11 @@ class SocpController:
             self.last_value = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
             self.logger.debug("SOCP callback: " + self.last_value.hex())
 
+            # decrypt the response
+            self.logger.debug("Decrypting: " + bytes(self.last_value).hex() + " ...")
+            data = self.sh.server.session.server_crypt.decrypt(self.last_value)
+            self.logger.debug("Decrypted: " + data.hex())
+            self.logger.debug("Decrypting: " + bytes(self.last_value).hex() + " ... DONE")
 
 
 if __name__ == "__main__":
