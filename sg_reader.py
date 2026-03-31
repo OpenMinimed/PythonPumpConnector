@@ -72,7 +72,9 @@ class SGReader:
             return None
 
         # decrypt the record
+        self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
         data = sh.server.session.server_crypt.decrypt(bytes(self.record))
+        self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
 
         # parse received record
         #
