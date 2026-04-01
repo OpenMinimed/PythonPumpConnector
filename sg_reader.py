@@ -47,8 +47,8 @@ class SGReader:
 
         self.sh = SakeHandler()
 
-        success = self._configure_characteristics()
-        assert success == True
+        self._configure_characteristics()
+        return
 
     def get_value(self, timeout:int=3) -> float | None:
         self.measurement_received = threading.Event()
@@ -73,9 +73,9 @@ class SGReader:
             return None
 
         # decrypt the record
-        self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
+        #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
         data = self.sh.server.session.server_crypt.decrypt(bytes(self.record))
-        self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
+        #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
 
         # parse received record
         #
@@ -108,40 +108,31 @@ class SGReader:
 
 
     def _configure_characteristics(self):
-        try:
-            # CGM service, CGM Measurement characteristic
-            self.logger.info("Adding characteristic CGM Measurement")
-            self.cgm_measurement = self.central.add_characteristic(
-                UUID_CGM_SERVICE, UUID_MEASUREMENT_CHAR)
-            while not self.cgm_measurement.resolve_gatt():
-                time.sleep(0.2)
-            assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
-            self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
-            self.logger.debug("measurement_cb added")
-            self.cgm_measurement.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic CGM Measurement")
-            self.logger.error(e)
-            return False
 
-        try:
-            # CGM service, Record Access Control Point characteristic
-            self.logger.info("Adding characteristic RACP")
-            self.cgm_racp = self.central.add_characteristic(
-                UUID_CGM_SERVICE, UUID_RACP_CHAR)
-            while not self.cgm_racp.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-            self.cgm_racp.add_characteristic_cb(self._racp_cb)
-            self.logger.debug("racp_cb added")
-            self.cgm_racp.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RACP")
-            self.logger.error(e)
-            return False
+        # CGM service, CGM Measurement characteristic
+        self.logger.info("Adding characteristic CGM Measurement")
+        self.cgm_measurement = self.central.add_characteristic(
+            UUID_CGM_SERVICE, UUID_MEASUREMENT_CHAR)
+        while not self.cgm_measurement.resolve_gatt():
+            time.sleep(0.2)
+        assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
+        self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
+        self.logger.debug("measurement_cb added")
+        self.cgm_measurement.start_notify()
 
-        return True
+        # CGM service, Record Access Control Point characteristic
+        self.logger.info("Adding characteristic RACP")
+        self.cgm_racp = self.central.add_characteristic(
+            UUID_CGM_SERVICE, UUID_RACP_CHAR)
+        while not self.cgm_racp.resolve_gatt():
+            time.sleep(0.2)
+        assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
+        assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
+        self.cgm_racp.add_characteristic_cb(self._racp_cb)
+        self.logger.debug("racp_cb added")
+        self.cgm_racp.start_notify()
+    
+        return
 
     def _racp_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:

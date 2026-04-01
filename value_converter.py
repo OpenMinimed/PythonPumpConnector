@@ -1,9 +1,9 @@
-
+import crc
 
 class ValueConverter():
     
     @staticmethod
-    def as_f16(value) -> float:
+    def decode_sfloat(value) -> float:
         e = (value & 0xf000) >> 12
         m = (value & 0x0fff)
         if e & 0x8:
@@ -16,3 +16,31 @@ class ValueConverter():
     def mgdl_to_mmolL(value_mgdl:float) -> float:
         molar_mass = 180.156
         return round((value_mgdl * 10) / molar_mass, 1)
+
+    @staticmethod
+    def e2e_crc(data: bytes) -> int:
+
+        calc = crc.Calculator(crc.Configuration(
+            width=16,
+            polynomial=0x1021,
+            init_value=0xffff,
+            final_xor_value=0,
+            reverse_input=False,
+            reverse_output=False,
+        ))
+        return calc.checksum(data)
+    
+    @staticmethod
+    def check_crc(msg:bytes) -> bool:
+        data = msg[0:-2]
+        crc_rcv = msg[-2:]
+        crc_calculated = ValueConverter.e2e_crc(data)
+        crc_rcv = int.from_bytes(crc_rcv, byteorder="little")
+        return crc_rcv == crc_calculated
+    
+
+if __name__ == "__main__":
+
+    print(ValueConverter.check_crc(bytes.fromhex("ea07031c0a1f2a80ff0873")))
+
+    

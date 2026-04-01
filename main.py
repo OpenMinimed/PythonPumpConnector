@@ -21,6 +21,7 @@ from sake_handler import SakeHandler
 from sg_reader import SGReader
 from socp import SocpController
 from value_converter import ValueConverter
+from cgm_misc import CgmMiscData
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
@@ -58,32 +59,54 @@ def main_logic():
             sg_reader = SGReader(pump)
             logging.debug("sg reader created")
 
-            socp_c = SocpController(pump)
+            socpc = SocpController(pump)
             logging.debug("SocpController created")
 
-        if sg_reader is None or socp_c is None:
+            cgmm = CgmMiscData(pump)
+            logging.debug("CgmMiscData created")
+
+        if sg_reader is None or socpc is None:
             continue
 
         # try to do stuff every 'read_seconds'
         if (last_run is None or time.monotonic() - last_run > read_seconds):
             last_run = time.monotonic()
 
-            # read sg
             try:
                 sg = sg_reader.get_value()
                 if sg is not None:
                     logging.info(f"read sg = {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
             except Exception as e:
                 logging.error(f"failed to read sg: {e}")
-
-            # read session id
+            
             try:
-                socp_c.trigger_session_id()
-
+                socpc.read_sensor_details()
             except Exception as e:
-                logging.error(f"failed to read socpc: {e}")
+                logging.error(f"failed to read_sensor_details(): {e}")
 
-        # TODO: put some ipython here for testing or something    
+            # NOTE: these do not work on the pump. you can get the same data from cgmm.read_start_time()
+            # try:
+            #     socpc.read_session_id()
+            # except Exception as e:
+            #     logging.error(f"failed to read_session_id(): {e}")
+           
+            # try:
+            #     socpc.read_session_start(0)
+            # except Exception as e:
+            #     logging.error(f"failed to read_session_start(): {e}")
+
+            try:
+                cgmm.read_start_time()
+            except Exception as e:
+                logging.error(f"failed to read_start_time(): {e}")  
+
+            try:
+                cgmm.read_run_time()
+            except Exception as e:
+                logging.error(f"failed to read_run_time(): {e}")  
+
+            
+        # TODO: put some ipython here for testing or something. we could also add hot reload for submodules maybe?!
 
 def main():
 
