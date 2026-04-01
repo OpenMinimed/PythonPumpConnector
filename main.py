@@ -32,14 +32,14 @@ def main_logic():
 
     first = True
     last_run = None
-    read_seconds = 5
+    work_seconds = 5
 
     while True:
 
         # dont waste cpu cycles
         sleep(0.1)
         
-        # SAKE handshake must have been completed
+        # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
 
@@ -47,7 +47,8 @@ def main_logic():
         # GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
-
+        
+        # initialize stuff at the start
         if first:
             logging.info("welcome from the main logic!")
             first = False
@@ -65,11 +66,8 @@ def main_logic():
             cgmm = CgmMiscData(pump)
             logging.debug("CgmMiscData created")
 
-        if sg_reader is None or socpc is None:
-            continue
-
-        # try to do stuff every 'read_seconds'
-        if (last_run is None or time.monotonic() - last_run > read_seconds):
+        # try to do stuff every 'work_seconds'
+        if (last_run is None or time.monotonic() - last_run > work_seconds):
             last_run = time.monotonic()
 
             try:

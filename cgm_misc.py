@@ -18,9 +18,9 @@ class CgmMiscData:
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self.central = central
         self.sh = SakeHandler()
-        self._configure_characteristics()
         self.run_time_char = None
         self.start_time_char = None
+        self._configure_characteristics()
         return
     
     def read_run_time(self) -> None | int:
