@@ -19,7 +19,9 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 from sg_reader import SGReader
-# from socp import SocpController
+from socp import SocpController
+from value_converter import ValueConverter
+from cgm_misc import CgmMiscData
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
@@ -29,14 +31,15 @@ device:Device = None
 def main_logic():
 
     first = True
-    sg_reader: SGReader = None
-    last_read = None
+    last_run = None
+    work_seconds = 5
 
     while True:
 
+        # dont waste cpu cycles
         sleep(0.1)
         
-        # SAKE handshake must have been completed
+        # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
 
@@ -44,7 +47,8 @@ def main_logic():
         # GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
-
+        
+        # initialize stuff at the start
         if first:
             logging.info("welcome from the main logic!")
             first = False
@@ -56,23 +60,51 @@ def main_logic():
             sg_reader = SGReader(pump)
             logging.debug("sg reader created")
 
-            #socpc = SocpController(pump)
-            #logging.debug("SocpController created")
+            socpc = SocpController(pump)
+            logging.debug("SocpController created")
 
-        
-        # try to read the SG every minute
-        if (last_read is None or time.monotonic() - last_read > 60) and sg_reader is not None:
-            last_read = time.monotonic()
+            cgmm = CgmMiscData(pump)
+            logging.debug("CgmMiscData created")
+
+        # try to do stuff every 'work_seconds'
+        if (last_run is None or time.monotonic() - last_run > work_seconds):
+            last_run = time.monotonic()
+
             try:
-                sg = sg_reader.get_value(sh)
-                logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
-                #socpc.trigger_session_id(sh)
-
+                sg = sg_reader.get_value()
+                if sg is not None:
+                    logging.info(f"read sg = {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
             except Exception as e:
                 logging.error(f"failed to read sg: {e}")
+            
+            try:
+                socpc.read_sensor_details()
+            except Exception as e:
+                logging.error(f"failed to read_sensor_details(): {e}")
 
-        # TODO: put some ipython here for testing or something
-    
+            # NOTE: these do not work on the pump. you can get the same data from cgmm.read_start_time()
+            # try:
+            #     socpc.read_session_id()
+            # except Exception as e:
+            #     logging.error(f"failed to read_session_id(): {e}")
+           
+            # try:
+            #     socpc.read_session_start(0)
+            # except Exception as e:
+            #     logging.error(f"failed to read_session_start(): {e}")
+
+            try:
+                cgmm.read_start_time()
+            except Exception as e:
+                logging.error(f"failed to read_start_time(): {e}")  
+
+            try:
+                cgmm.read_run_time()
+            except Exception as e:
+                logging.error(f"failed to read_run_time(): {e}")  
+
+            
+        # TODO: put some ipython here for testing or something. we could also add hot reload for submodules maybe?!
 
 def main():
 
