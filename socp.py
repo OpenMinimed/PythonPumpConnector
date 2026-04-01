@@ -4,14 +4,8 @@ from bluezero.central import Central
 #import threading
 import time
 
-#from cgm_measurement import CGMMeasurement
 from log_manager import LogManager
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sake_handler import SakeHandler
-
+from sake_handler import SakeHandler
 from cgm_measurement import CGMMeasurement
 from sg_reader import UUID_CGM_SERVICE
 
@@ -20,21 +14,20 @@ UUID_SOCP_CHAR        = "00002aac-0000-1000-8000-00805f9b34fb"
 # get sensor details: 1717274581169,sake,encrypt,90 4962 (3 bytes raw);896d0a09cc8f (6 bytes encrypted)
 
 
-class SocpController:
+class SocpController():
+
+    # TODO: decode and return the session id. create proper events and stuff like the other classes.
 
     def __init__(self, central:Central):
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self.central = central
-
-        #self.cgm_measurement = None
-        #self.cgm_racp        = None
 
         #self.measurement_received = threading.Event()
         #self.operation_finished   = threading.Event()
         self.last_value:bytes   = None
         #self.response = None
 
-        self.sh = None
+        self.sh = SakeHandler()
 
         #success = self._configure_characteristics()
         #assert success == True
@@ -52,8 +45,7 @@ class SocpController:
         self.logger.debug("socp notifications enabled")
         return
 
-    def trigger_session_id(self, sh:"SakeHandler"):
-        self.sh = sh
+    def trigger_session_id(self):
 
         req = bytes([0x8c])
         crc = CGMMeasurement.e2e_crc(req)
@@ -63,32 +55,24 @@ class SocpController:
         # Op Code: 0x90   (Get Sensor Details)
         # E2E-CRC: 0x6249
         req = bytes.fromhex("904962")
-        ciph = sh.server.session.server_crypt.encrypt(req)
+        ciph = self.sh.server.session.server_crypt.encrypt(req)
         self.logger.debug(f"writing {req.hex()} (encrypted: {ciph.hex()}) to scp...")
-       
-        # TODO: This triggers false warnings at the moment. If we want to keep
-        #       this for debugging, we should fix the client_crypt.
-        #
-        # NOTE: if you send wrongly encrypted data here, you will get 20 zero bytes on sake char. if you dont re-handshake in 5seconds you will get a disconnect???
-        #try:
-        #    dec = sh.server.session.client_crypt.decrypt(ciph)
-        #    self.logger.debug(f"client decrypted = {dec.hex()}")
-        #except Exception as e:
-        #    self.logger.warning(f"client dec failed! {e}")
-
         self.socp_char.write_value(list(ciph))
         return
 
     def _socp_cb(self, iface, changed_props, invalidated_props):
+        
         if "Value" in changed_props:
+    
             self.last_value = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
             self.logger.debug("SOCP callback: " + self.last_value.hex())
 
             # decrypt the response
             self.logger.debug("Decrypting: " + bytes(self.last_value).hex() + " ...")
             data = self.sh.server.session.server_crypt.decrypt(self.last_value)
-            self.logger.debug("Decrypted: " + data.hex())
-            self.logger.debug("Decrypting: " + bytes(self.last_value).hex() + " ... DONE")
+            self.logger.debug("Decrypted OK: " + data.hex())
+
+        return
 
 
 if __name__ == "__main__":

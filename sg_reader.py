@@ -7,10 +7,7 @@ import time
 from cgm_measurement import CGMMeasurement
 from log_manager import LogManager
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sake_handler import SakeHandler
+from sake_handler import SakeHandler
 
 UUID_CGM_SERVICE      = "0000181f-0000-1000-8000-00805f9b34fb"
 UUID_MEASUREMENT_CHAR = "00002aa7-0000-1000-8000-00805f9b34fb"
@@ -18,7 +15,9 @@ UUID_RACP_CHAR        = "00002a52-0000-1000-8000-00805f9b34fb"
 
 
 class SGReader:
-    """Test for reading an SG value through the pump's CGM service
+
+    """
+    Test for reading an SG value through the pump's CGM service
 
     The latest record is requested on the Record Access Control Point.
     We then expect the pump to answer with a CGM Measurement and to send
@@ -46,10 +45,12 @@ class SGReader:
         self.record:bytearray   = None
         self.response = None
 
+        self.sh = SakeHandler()
+
         success = self._configure_characteristics()
         assert success == True
 
-    def get_value(self, sh:"SakeHandler", timeout:int=3) -> float | None:
+    def get_value(self, timeout:int=3) -> float | None:
         self.measurement_received = threading.Event()
 
         self.logger.info("Requesting last stored record")
@@ -73,7 +74,7 @@ class SGReader:
 
         # decrypt the record
         self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
-        data = sh.server.session.server_crypt.decrypt(bytes(self.record))
+        data = self.sh.server.session.server_crypt.decrypt(bytes(self.record))
         self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
 
         # parse received record
@@ -105,20 +106,6 @@ class SGReader:
 
         return float(measurement_record.glucose)
 
-    @staticmethod
-    def as_f16(value) -> int | float:
-        e = (value & 0xf000) >> 12
-        m = (value & 0x0fff)
-        if e & 0x8:
-            e = e - 0x10
-        if m & 0x800:
-            m = m - 0x1000
-        return m * 10**e
-    
-    @staticmethod
-    def mgdl_to_mmolL(value_mgdl):
-        molar_mass = 180.156
-        return round((value_mgdl * 10) / molar_mass, 1)
 
     def _configure_characteristics(self):
         try:

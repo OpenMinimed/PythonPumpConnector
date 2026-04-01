@@ -20,6 +20,7 @@ from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 from sg_reader import SGReader
 from socp import SocpController
+from value_converter import ValueConverter
 
 ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
@@ -29,12 +30,12 @@ device:Device = None
 def main_logic():
 
     first = True
-    sg_reader: SGReader = None
-    last_read = None
-    read_seconds = 1
+    last_run = None
+    read_seconds = 5
 
     while True:
 
+        # dont waste cpu cycles
         sleep(0.1)
         
         # SAKE handshake must have been completed
@@ -57,39 +58,32 @@ def main_logic():
             sg_reader = SGReader(pump)
             logging.debug("sg reader created")
 
-            socpc = SocpController(pump)
+            socp_c = SocpController(pump)
             logging.debug("SocpController created")
 
-        
-        # try to read the SG every minute
-        if (last_read is None or time.monotonic() - last_read > read_seconds) and sg_reader is not None:
-            last_read = time.monotonic()
+        if sg_reader is None or socp_c is None:
+            continue
 
-            for i in range(3):
-                try:
-                    sg = sg_reader.get_value(sh, timeout=10)
-                    if sg is not None:
-                        logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
-                except Exception as e:
-                    logging.error(f"failed to read sg: {e}")
-            #    time.sleep(2)
+        # try to do stuff every 'read_seconds'
+        if (last_run is None or time.monotonic() - last_run > read_seconds):
+            last_run = time.monotonic()
 
-
+            # read sg
             try:
-                pass
-             #   time.sleep(1)
-                socpc.trigger_session_id(sh)
-                #sg = sg_reader.get_value(sh)
-                #logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
+                sg = sg_reader.get_value()
+                if sg is not None:
+                    logging.info(f"read sg = {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
+            except Exception as e:
+                logging.error(f"failed to read sg: {e}")
+
+            # read session id
+            try:
+                socp_c.trigger_session_id()
 
             except Exception as e:
                 logging.error(f"failed to read socpc: {e}")
 
-
-
-
-        # TODO: put some ipython here for testing or something
-    
+        # TODO: put some ipython here for testing or something    
 
 def main():
 

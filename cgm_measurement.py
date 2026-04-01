@@ -138,6 +138,7 @@ class CGMMeasurement:
         value = int.from_bytes(data[0:n], "little")
         return value, data[n:]
 
+    # TODO: move this to value converter, same as as_f16()
     @staticmethod
     def decode_sfloat(value: int) -> int | float:
         e = (value & 0xf000) >> 12
@@ -148,6 +149,7 @@ class CGMMeasurement:
             m = m - 0x1000
         return m * 10**e
 
+    # TODO: move this to value converter class
     @staticmethod
     def e2e_crc(data: bytes) -> int:
         calc = crc.Calculator(crc.Configuration(

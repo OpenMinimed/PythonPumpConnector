@@ -3,9 +3,11 @@ import queue
 
 from log_manager import LogManager
 from pysake.server import SakeServer
-from pysake.constants import KEYDB_PUMP_EXTRACTED, KEYDB_PUMP_HARDCODED
+from pysake.constants import KEYDB_PUMP_EXTRACTED
 
-class SakeHandler:
+from singleton import Singleton
+
+class SakeHandler(metaclass=Singleton):
 
     pump_enabled: bool = False
     char = None
