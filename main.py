@@ -18,21 +18,21 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
+from value_converter import ValueConverter
+
 from sg_reader import SGReader
 from socp import SocpController
-from value_converter import ValueConverter
 from cgm_misc import CgmMiscData
 
-ph:PeripheralHandler = None
+import importlib
+
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
 
 def main_logic():
 
-    first = True
-    last_run = None
-    work_seconds = 5
+    initialized = False
 
     while True:
 
@@ -43,15 +43,14 @@ def main_logic():
         if sh is None or not sh.is_done():
             continue
 
-        # connection to pump must have been established
-        # GATT discovery must have been completed
+        # connection to pump must have been established and GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
         
-        # initialize stuff at the start
-        if first:
-            logging.info("welcome from the main logic!")
-            first = False
+        # initialize stuff if not already
+        if not initialized:
+
+            initialized = True
             assert device.services_resolved
 
             pump = Central(device.address, device.adapter)
@@ -66,45 +65,66 @@ def main_logic():
             cgmm = CgmMiscData(pump)
             logging.debug("CgmMiscData created")
 
-        # try to do stuff every 'work_seconds'
-        if (last_run is None or time.monotonic() - last_run > work_seconds):
-            last_run = time.monotonic()
+            modules_to_reload = [
+                'sg_reader',
+                'socp',
+                'cgm_misc',
+            ]
 
-            try:
+            # Define action functions
+            def reload_modules():
+                for mod_name in modules_to_reload:
+                    try:
+                        importlib.reload(sys.modules[mod_name])
+                        print(f"Reloaded: {mod_name}")
+                    except Exception as e:
+                        print(f"Reload failed for {mod_name}: {e}")
+
+            def read_sg():
                 sg = sg_reader.get_value()
                 if sg is not None:
-                    logging.info(f"read sg = {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
-            except Exception as e:
-                logging.error(f"failed to read sg: {e}")
-            
-            try:
+                    print(f"SG: {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
+                else:
+                    print("SG: None")
+
+            def read_sensor_details():
                 socpc.read_sensor_details()
-            except Exception as e:
-                logging.error(f"failed to read_sensor_details(): {e}")
+                print("Sensor details read")
 
-            # NOTE: these do not work on the pump. you can get the same data from cgmm.read_start_time()
-            # try:
-            #     socpc.read_session_id()
-            # except Exception as e:
-            #     logging.error(f"failed to read_session_id(): {e}")
-           
-            # try:
-            #     socpc.read_session_start(0)
-            # except Exception as e:
-            #     logging.error(f"failed to read_session_start(): {e}")
-
-            try:
+            def read_start_time():
                 cgmm.read_start_time()
-            except Exception as e:
-                logging.error(f"failed to read_start_time(): {e}")  
+                print("Start time read")
 
+            def print_help():
+                print("\n\n" + "="*40)
+                print("Available commands:")
+                for k, (desc, _) in actions.items():
+                    print(f"  {k}: {desc}")
+
+            # Define actions
+            actions = {
+                'r': ('Reload all modules', reload_modules),
+                '1': ('Read SG value', read_sg),
+                '2': ('Read sensor details', read_sensor_details),
+                '3': ('Read start time', read_start_time),
+              #  'h': ('Show help/commands', print_help),
+            }
+
+            # Print options at start
+            print_help()
+
+
+        # Handle user input
+        print("\n> ", end='')
+        key = input().strip().lower()
+        if key in actions:
             try:
-                cgmm.read_run_time()
+                actions[key][1]()
+                print_help()
             except Exception as e:
-                logging.error(f"failed to read_run_time(): {e}")  
-
-            
-        # TODO: put some ipython here for testing or something. we could also add hot reload for submodules maybe?!
+                print(f"Action '{actions[key][0]}' failed: {e}")
+        elif key:
+            print(f"Unknown key: {key}. Press 'h' for help.")
 
 def main():
 
