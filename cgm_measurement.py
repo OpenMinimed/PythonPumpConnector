@@ -1,7 +1,7 @@
-import crc
 import logging
 
 from log_manager import LogManager
+from value_converter import ValueConverter
 
 
 class CGMMeasurement:
@@ -26,13 +26,13 @@ class CGMMeasurement:
 
         # parsed data
         self.flags: int = None
-        self.glucose: int|float = None
+        self.glucose: float = None
         self.time_offset: int = None
         self.status: int = None
         self.cal_temp: int = None
         self.warning: int = None
-        self.trend: int|float = None
-        self.quality: int|float = None
+        self.trend: float = None
+        self.quality: float = None
 
     def parse(self) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
@@ -49,17 +49,11 @@ class CGMMeasurement:
 
         # validate E2E-CRC
         if self.use_crc:
-            # extract and snip E2E-CRC from record (its last 2 bytes)
-            crc = int.from_bytes(data[-2:], "little")
+            if not ValueConverter.check_crc(data):
+                self.logger.error("E2E-CRC mismatch")
+                return False
             data = data[:-2]
 
-            # CRC of the remaining record
-            computed_crc = self.e2e_crc(data)
-
-            if crc != computed_crc:
-                self.logger.error("E2E-CRC mismatch: computed %04x, got %04x"
-                    % (computed_crc, crc))
-                return False
 
         # mandatory fields
         size,    data = self._consume(data, 1)
@@ -72,7 +66,7 @@ class CGMMeasurement:
                 % (length, size))
             return False
 
-        glucose = self.decode_sfloat(glucose)
+        glucose = ValueConverter.decode_sfloat(glucose)
 
         # Sensor Status Annunciation (optional)
 
@@ -92,13 +86,13 @@ class CGMMeasurement:
         trend = None
         if flags & 0x01:  # CGM Trend Information present
             trend, data = self._consume(data, 2)
-            trend = self.decode_sfloat(trend)
+            trend = ValueConverter.decode_sfloat(trend)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
             quality, data = self._consume(data, 2)
-            quality = self.decode_sfloat(quality)
+            quality = ValueConverter.decode_sfloat(quality)
 
         # we are done, there must not be any data left in the record
         if len(data) > 0:
@@ -132,33 +126,11 @@ class CGMMeasurement:
         ]) + "\n)"
 
     @staticmethod
-    def _consume(data: bytes, n: int) -> int:
+    def _consume(data: bytes, n: int) -> tuple[int, bytes]:
         # NOTE: copying this bytes object every time is rather wasteful
         assert n <= len(data)
         value = int.from_bytes(data[0:n], "little")
         return value, data[n:]
-
-    @staticmethod
-    def decode_sfloat(value: int) -> int | float:
-        e = (value & 0xf000) >> 12
-        m = (value & 0x0fff)
-        if e & 0x8:
-            e = e - 0x10
-        if m & 0x800:
-            m = m - 0x1000
-        return m * 10**e
-
-    @staticmethod
-    def e2e_crc(data: bytes) -> int:
-        calc = crc.Calculator(crc.Configuration(
-            width=16,
-            polynomial=0x1021,
-            init_value=0xffff,
-            final_xor_value=0,
-            reverse_input=False,
-            reverse_output=False,
-        ))
-        return calc.checksum(data)
 
 
 if __name__ == "__main__":
@@ -170,4 +142,4 @@ if __name__ == "__main__":
         print(m)
     else:
         print("Failed to parse measurement")
-
+        

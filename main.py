@@ -18,47 +18,113 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
+from value_converter import ValueConverter
 
-from cm import CertificateManagement
-# from socp import SocpController
+from sg_reader import SGReader
+from socp import SocpController
+from cgm_misc import CgmMiscData
 
-ph:PeripheralHandler = None
+import importlib
+
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
 
 def main_logic():
 
-    first = True
-    sg_reader: SGReader = None
-    last_read = None
+    initialized = False
 
     while True:
 
+        # dont waste cpu cycles
         sleep(0.1)
         
-        # SAKE handshake must have been completed
+        # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
 
-        # connection to pump must have been established
-        # GATT discovery must have been completed
+        # connection to pump must have been established and GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
+        
+        # initialize stuff if not already
+        if not initialized:
 
-        if first:
-            logging.info("welcome from the main logic!")
-            first = False
+            initialized = True
             assert device.services_resolved
 
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            cm = CertificateManagement(pump)
-            cm.send_request()
+            sg_reader = SGReader(pump)
+            logging.debug("sg reader created")
 
-        # TODO: put some ipython here for testing or something
-    
+            socpc = SocpController(pump)
+            logging.debug("SocpController created")
+
+            cgmm = CgmMiscData(pump)
+            logging.debug("CgmMiscData created")
+
+            modules_to_reload = [
+                'sg_reader',
+                'socp',
+                'cgm_misc',
+            ]
+
+            # Define action functions
+            def reload_modules():
+                for mod_name in modules_to_reload:
+                    try:
+                        importlib.reload(sys.modules[mod_name])
+                        print(f"Reloaded: {mod_name}")
+                    except Exception as e:
+                        print(f"Reload failed for {mod_name}: {e}")
+
+            def read_sg():
+                sg = sg_reader.get_value()
+                if sg is not None:
+                    print(f"SG: {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
+                else:
+                    print("SG: None")
+
+            def read_sensor_details():
+                socpc.read_sensor_details()
+                print("Sensor details read")
+
+            def read_start_time():
+                cgmm.read_start_time()
+                print("Start time read")
+
+            def print_help():
+                print("\n\n" + "="*40)
+                print("Available commands:")
+                for k, (desc, _) in actions.items():
+                    print(f"  {k}: {desc}")
+
+            # Define actions
+            actions = {
+                'r': ('Reload all modules', reload_modules),
+                '1': ('Read SG value', read_sg),
+                '2': ('Read sensor details', read_sensor_details),
+                '3': ('Read start time', read_start_time),
+              #  'h': ('Show help/commands', print_help),
+            }
+
+            # Print options at start
+            print_help()
+
+
+        # Handle user input
+        print("\n> ", end='')
+        key = input().strip().lower()
+        if key in actions:
+            try:
+                actions[key][1]()
+                print_help()
+            except Exception as e:
+                print(f"Action '{actions[key][0]}' failed: {e}")
+        elif key:
+            print(f"Unknown key: {key}. Press 'h' for help.")
 
 def main():
 
