@@ -18,19 +18,17 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
-from value_converter import ValueConverter
-
-from sg_reader import SGReader
-from socp import SocpController
-from cgm_misc import CgmMiscData
 
 import importlib
+import sys
 
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
 
 def main_logic():
+
+    global sgr, socpc, cgmm, certman
 
     initialized = False
 
@@ -56,44 +54,57 @@ def main_logic():
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            sg_reader = SGReader(pump)
-            logging.debug("sg reader created")
+            def initialize_components():
 
-            socpc = SocpController(pump)
-            logging.debug("SocpController created")
+                # NOTE: HOW TO ADD A NEW COMPONENT:
+                # 1. create a new global instance definition
+                # 2. import it
+                # 3. instantiate it below
+                # 4. add it into 'modules_to_reload'
+                # 5. add a new callout into the 'actions' variable
+            
+                global sgr, socpc, cgmm, certman
 
-            cgmm = CgmMiscData(pump)
-            logging.debug("CgmMiscData created")
+                from sg_reader import SGReader
+                from socp import SocpController
+                from cgm_misc import CgmMiscData
+                from cm import CertificateManagement
 
-            modules_to_reload = [
-                'sg_reader',
-                'socp',
-                'cgm_misc',
-            ]
+                sgr = SGReader(pump)
+                logging.info("sg reader created")
+                socpc = SocpController(pump)
+                logging.info("SocpController created")
+                cgmm = CgmMiscData(pump)
+                logging.info("CgmMiscData created")
+                certman = CertificateManagement(pump)
+                logging.info("CertificateManagement created")
 
-            # Define action functions
+                return
+
+            initialize_components()
+            
             def reload_modules():
+
+                modules_to_reload = [
+                    'sg_reader',
+                    'socp',
+                    'cgm_misc',
+                    'cm'
+                ]
+
+                logging.info("Destructing components...")
+ 
                 for mod_name in modules_to_reload:
                     try:
-                        importlib.reload(sys.modules[mod_name])
-                        print(f"Reloaded: {mod_name}")
+                        if mod_name in sys.modules:
+                            del sys.modules[mod_name]
+                        importlib.import_module(mod_name)
+                        logging.info(f"Reloaded: {mod_name}")
                     except Exception as e:
-                        print(f"Reload failed for {mod_name}: {e}")
-
-            def read_sg():
-                sg = sg_reader.get_value()
-                if sg is not None:
-                    print(f"SG: {sg} mg/dl ({ValueConverter.mgdl_to_mmolL(sg)} mmol/L)")
-                else:
-                    print("SG: None")
-
-            def read_sensor_details():
-                socpc.read_sensor_details()
-                print("Sensor details read")
-
-            def read_start_time():
-                cgmm.read_start_time()
-                print("Start time read")
+                        logging.error(f"Reload failed for {mod_name}: {e}")
+           
+                initialize_components()
+                logging.info("Components re-initialized")
 
             def print_help():
                 print("\n\n" + "="*40)
@@ -104,9 +115,10 @@ def main_logic():
             # Define actions
             actions = {
                 'r': ('Reload all modules', reload_modules),
-                '1': ('Read SG value', read_sg),
-                '2': ('Read sensor details', read_sensor_details),
-                '3': ('Read start time', read_start_time),
+                '1': ('Read SG value', lambda: sgr.get_value()),
+                '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
+                '3': ('Read start time', lambda: cgmm.read_start_time()),
+                '4': ('Get pump certificate', lambda: certman.send_request()),
               #  'h': ('Show help/commands', print_help),
             }
 
