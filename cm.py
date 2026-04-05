@@ -12,8 +12,8 @@ UUID_CM_DATA_CHAR      = "00000602-0000-1000-0000-009132591325"
 
 
 class CertificateManagement:
-    """Certificate Management
-
+    """
+    Certificate Management
     """
 
     def __init__(self, central:Central):
@@ -30,7 +30,7 @@ class CertificateManagement:
         ## Certificate Management Control Point char
 
         # Opcode: 0x00 (Get Certificate)
-        #self.cm_cp.write_value([0x00])
+        self.cm_cp.write_value([0x00])
         pass
 
     def _configure_characteristics(self):

@@ -114,7 +114,7 @@ class CGMMeasurement:
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Flags:                     {self.flags:08b}",
-            f"CGM Glucose Concentration: {self.glucose} mg/dL",
+            f"CGM Glucose Concentration: {self.glucose} mg/dL ({ValueConverter.mgdl_to_mmolL(self.glucose)} mmol/L)",
             f"Time Offset:               {self.time_offset} min",
             f"Status:                    {self.status:08b}",
             f"Cal/Temp:                  {self.cal_temp:08b}",
