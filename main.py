@@ -6,7 +6,7 @@ add_submodule_to_path() # bit of hacking ;)
 import logging
 import threading
 import argparse
-import time
+import traceback
 
 from bluezero import adapter
 from bluezero.device import Device
@@ -63,8 +63,9 @@ def main_logic():
                 # 4. add it into 'modules_to_reload'
                 # 5. add a new callout into the 'actions' variable
             
-                global sgr, socpc, cgmm, certman
+                global sgr, socpc, cgmm, certman, hr
 
+                from history_reader import HistoryReader
                 from sg_reader import SGReader
                 from socp import SocpController
                 from cgm_misc import CgmMiscData
@@ -78,7 +79,9 @@ def main_logic():
                 logging.info("CgmMiscData created")
                 certman = CertificateManagement(pump)
                 logging.info("CertificateManagement created")
-
+                hr = HistoryReader(pump)
+                logging.info("HistoryReader created")
+     
                 return
 
             initialize_components()
@@ -89,7 +92,8 @@ def main_logic():
                     'sg_reader',
                     'socp',
                     'cgm_misc',
-                    'cm'
+                    'cm',
+                    'history_reader'
                 ]
 
                 logging.info("Destructing components...")
@@ -112,14 +116,22 @@ def main_logic():
                 for k, (desc, _) in actions.items():
                     print(f"  {k}: {desc}")
 
+            def read_history():
+                history = hr.get_records()
+                if history is not None:
+                    # dump raw records
+                    for r in history:
+                        print(r.data.hex())
+
             # Define actions
             actions = {
-                'r': ('Reload all modules', reload_modules),
+                'r': ('Reload all modules', lambda:reload_modules()),
                 '1': ('Read SG value', lambda: sgr.get_value()),
                 '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
                 '3': ('Read start time', lambda: cgmm.read_start_time()),
                 '4': ('Get pump certificate', lambda: certman.send_request()),
-              #  'h': ('Show help/commands', print_help),
+                '5': ('Read IDD history', lambda:read_history()),
+                'h': ('Show help/commands', print_help),
             }
 
             # Print options at start
@@ -134,7 +146,7 @@ def main_logic():
                 actions[key][1]()
                 print_help()
             except Exception as e:
-                print(f"Action '{actions[key][0]}' failed: {e}")
+                print(f"Action '{actions[key][0]}' failed: {e} {traceback.print_exc()}")
         elif key:
             print(f"Unknown key: {key}. Press 'h' for help.")
 

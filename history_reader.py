@@ -6,11 +6,7 @@ import time
 
 from history_data import HistoryData
 from log_manager import LogManager
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sake_handler import SakeHandler
+from sake_handler import SakeHandler
 
 UUID_IDD_SERVICE       = "00000100-0000-1000-0000-009132591325"
 UUID_HISTORY_DATA_CHAR = "00000108-0000-1000-0000-009132591325"
@@ -18,7 +14,8 @@ UUID_RACP_CHAR         = "00002a52-0000-1000-8000-00805f9b34fb"
 
 
 class HistoryReader:
-    """Test for dumping event history through the pump's IDD service
+    """
+    Test for dumping event history through the pump's IDD service
 
     Records are requested on the Record Access Control Point (RACP).
     We then expect the pump to answer with one or multiple
@@ -44,11 +41,12 @@ class HistoryReader:
         self.operation_finished = threading.Event()
         self.records: list[bytearray] = []
         self.response = None
+        self.sh = SakeHandler()
 
         success = self._configure_characteristics()
         assert success == True
 
-    def get_records(self, sh: "SakeHandler", timeout: int = None):
+    def get_records(self, timeout: int = 30):
         self.measurement_received = threading.Event()
 
         self.logger.info("Requesting record(s)")
@@ -109,7 +107,7 @@ class HistoryReader:
         parsed_records = []
         for record in self.records:
             # decrypt the record
-            data = sh.server.session.server_crypt.decrypt(bytes(record))
+            data = self.sh.server.session.server_crypt.decrypt(bytes(record))
 
             # parse record
             #
