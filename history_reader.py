@@ -51,6 +51,8 @@ class HistoryReader:
 
         self.logger.info("Requesting record(s)")
 
+        # IddRacpOperator
+        
         # Op Code:  0x33 (Report Stored Records)
         # Op Code:  0x5a (Report Number of Stored Records)
 
@@ -76,6 +78,11 @@ class HistoryReader:
         # Operand:  0x000395f8 (Filter Parameter: maximum filter value)
         #self.idd_racp.write_value([0x33, 0x3c, 0x0f, 0xf8,0x95,0x03,0x00])
 
+
+        # WARNING! THIS READS EVERYTHING! TAKES A FEW MINUTES!
+        # self.idd_racp.write_value([0x33, 0x33, 0x0f])
+
+        # TODO: how to handle timeout here? just ignore it maybe for now?
         # wait for a response
         if self.operation_finished.wait(timeout=timeout):
             self.logger.info("Operation finished")
