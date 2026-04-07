@@ -30,8 +30,23 @@ class CertificateManagement:
         ## Certificate Management Control Point char
 
         # Opcode: 0x00 (Get Certificate)
-        self.cm_cp.write_value([0x00])
-        pass
+        #self.cm_cp.write_value([0x00])
+
+        # CertificateManagementOpCode
+        # GET_CERTIFICATE(0),
+        # GET_ENROLLMENT(1),
+        # SET_ENROLLMENT(2),
+        # RESPONSE(3),
+        # GET_CERTIFICATE_AUTHORITY(4),
+        # SET_CERTIFICATE_AUTHORITY(5),
+        # GET_REGISTRATION_AUTHORITY(6),
+        # SET_REGISTRATION_AUTHORITY(7),
+        # GET_FIRMWARE_AUTHORITY(8),
+        # SET_FIRMWARE_AUTHORITY(9);
+        self.cm_cp.write_value([9])
+
+        
+        return
 
     def _configure_characteristics(self):
         try:
