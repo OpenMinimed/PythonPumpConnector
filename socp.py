@@ -44,6 +44,10 @@ class SocpController():
         self._configure_characteristics()
         return
     
+    def unsubscribe(self):
+        self.socp_char.add_characteristic_cb(None)
+        return
+    
     def _configure_characteristics(self):
         self.logger.debug("Adding SOCP char")
         self.socp_char = self.central.add_characteristic(UUID_CGM_SERVICE, UUID_SOCP_CHAR)

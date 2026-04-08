@@ -26,6 +26,11 @@ class CertificateManagement:
         success = self._configure_characteristics()
         assert success == True
 
+    def unsubscribe(self):
+        self.cm_data.add_characteristic_cb(None)
+        self.cm_cp.add_characteristic_cb(None)
+        return
+
     def send_request(self):
         ## Certificate Management Control Point char
 

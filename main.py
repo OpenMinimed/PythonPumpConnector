@@ -25,15 +25,140 @@ import sys
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
+pump = None
+
+# Component instances
+sgr = None
+socpc = None
+cgmm = None
+certman = None
+hr = None
+
+# Actions dict
+actions = {}
+
+# HOW TO ADD A NEW MODULE:
+# 1. Add global variable declaration at module level (e.g., new_component = None)
+# 2. Add import in initialize_components() function
+# 3. Instantiate in initialize_components() function
+# 4. Add module name to modules_to_reload list in reload_modules()
+# 5. Add unsubscribe call in unsubscribe_components()
+# 6. Add action in setup_actions() function
+
+def initialize_components(pump):
+
+    global sgr, socpc, cgmm, certman, hr
+
+    from sg_reader import SGReader
+    from socp import SocpController
+    from cgm_misc import CgmMiscData
+    from cm import CertificateManagement
+    from history_reader import HistoryReader
+
+    sgr = SGReader(pump)
+    logging.info("sg reader created")
+    socpc = SocpController(pump)
+    logging.info("SocpController created")
+    cgmm = CgmMiscData(pump)
+    logging.info("CgmMiscData created")
+    certman = CertificateManagement(pump)
+    logging.info("CertificateManagement created")
+    hr = HistoryReader(pump)
+    logging.info("HistoryReader created")
+
+def unsubscribe_components():
+
+    global sgr, socpc, cgmm, certman, hr
+    
+    # fix for duplicated notifications in case of reload 
+    # see https://github.com/ukBaz/python-bluezero/issues/342
+
+    sgr.unsubscribe()
+    socpc.unsubscribe()
+    cgmm.unsubscribe()
+    certman.unsubscribe()
+    hr.unsubscribe()
+
+    return
+
+def reload_modules():
+
+    global actions, pump
+
+    modules_to_reload = [
+        'sg_reader',
+        'socp',
+        'cgm_misc',
+        'cm',
+        'history_reader'
+    ]
+
+    logging.info("Unsubscribing components...")
+    unsubscribe_components()
+        
+    # Clear actions dict first to break closures holding references
+    actions.clear()
+    
+    # Remove modules from sys.modules and reimport
+    for mod_name in modules_to_reload:
+        try:
+            if mod_name in sys.modules:
+                del sys.modules[mod_name]
+            importlib.import_module(mod_name)
+            logging.info(f"Reloaded: {mod_name}")
+        except Exception as e:
+            logging.error(f"Reload failed for {mod_name}: {e}")
+    
+    # Reinitialize components and actions
+    initialize_components(pump)
+    setup_actions()
+    logging.info("Components re-initialized")
+    return
+
+def print_help():
+    print("\n\n" + "="*40)
+    print("Available commands:")
+    for k, (desc, _) in actions.items():
+        print(f"  {k}: {desc}")
+    return
+
+def read_history():
+    hr.get_available_record_count()
+    return
+
+def setup_actions():
+    global actions
+    
+    actions = {
+        'r': ('Reload all modules', lambda: reload_modules()),
+        '1': ('Read SG value', lambda: sgr.get_value()),
+        '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
+        '3': ('Read start time', lambda: cgmm.read_start_time()),
+        '4': ('Get pump certificate', lambda: certman.send_request()),
+        '5': ('Read IDD history', lambda: read_history()),
+        'h': ('Show help/commands', lambda: print_help()),
+    }
+
+def main_input_loop():
+
+    while True:
+        print("\n> ", end='')
+        key = input().strip().lower()
+        if key in actions:
+            try:
+                actions[key][1]()
+                print_help()
+            except Exception as e:
+                print(f"Action '{actions[key][0]}' failed: {e} {traceback.print_exc()}")
+        elif key:
+            print(f"Unknown key: {key}. Press 'h' for help.")
 
 def main_logic():
-
-    global sgr, socpc, cgmm, certman
+    global sgr, socpc, cgmm, certman, hr, pump
 
     initialized = False
 
     while True:
-
         # dont waste cpu cycles
         sleep(0.1)
         
@@ -47,108 +172,18 @@ def main_logic():
         
         # initialize stuff if not already
         if not initialized:
-
             initialized = True
             assert device.services_resolved
 
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            def initialize_components():
+            initialize_components(pump)
+            setup_actions()
 
-                # NOTE: HOW TO ADD A NEW COMPONENT:
-                # 1. create a new global instance definition
-                # 2. import it
-                # 3. instantiate it below
-                # 4. add it into 'modules_to_reload'
-                # 5. add a new callout into the 'actions' variable
-            
-                global sgr, socpc, cgmm, certman, hr
-
-                from history_reader import HistoryReader
-                from sg_reader import SGReader
-                from socp import SocpController
-                from cgm_misc import CgmMiscData
-                from cm import CertificateManagement
-
-                sgr = SGReader(pump)
-                logging.info("sg reader created")
-                socpc = SocpController(pump)
-                logging.info("SocpController created")
-                cgmm = CgmMiscData(pump)
-                logging.info("CgmMiscData created")
-                certman = CertificateManagement(pump)
-                logging.info("CertificateManagement created")
-                hr = HistoryReader(pump)
-                logging.info("HistoryReader created")
-     
-                return
-
-            initialize_components()
-            
-            def reload_modules():
-
-                modules_to_reload = [
-                    'sg_reader',
-                    'socp',
-                    'cgm_misc',
-                    'cm',
-                    'history_reader'
-                ]
-
-                logging.info("Destructing components...")
- 
-                for mod_name in modules_to_reload:
-                    try:
-                        if mod_name in sys.modules:
-                            del sys.modules[mod_name]
-                        importlib.import_module(mod_name)
-                        logging.info(f"Reloaded: {mod_name}")
-                    except Exception as e:
-                        logging.error(f"Reload failed for {mod_name}: {e}")
-           
-                initialize_components()
-                logging.info("Components re-initialized")
-
-            def print_help():
-                print("\n\n" + "="*40)
-                print("Available commands:")
-                for k, (desc, _) in actions.items():
-                    print(f"  {k}: {desc}")
-
-            def read_history():
-                history = hr.get_records()
-                if history is not None:
-                    # dump raw records
-                    for r in history:
-                        print(r.data.hex())
-
-            # Define actions
-            actions = {
-                'r': ('Reload all modules', lambda:reload_modules()),
-                '1': ('Read SG value', lambda: sgr.get_value()),
-                '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
-                '3': ('Read start time', lambda: cgmm.read_start_time()),
-                '4': ('Get pump certificate', lambda: certman.send_request()),
-                '5': ('Read IDD history', lambda:read_history()),
-                'h': ('Show help/commands', print_help),
-            }
-
-            # Print options at start
+            # Run main input loop
             print_help()
-
-
-        # Handle user input
-        print("\n> ", end='')
-        key = input().strip().lower()
-        if key in actions:
-            try:
-                actions[key][1]()
-                print_help()
-            except Exception as e:
-                print(f"Action '{actions[key][0]}' failed: {e} {traceback.print_exc()}")
-        elif key:
-            print(f"Unknown key: {key}. Press 'h' for help.")
+            main_input_loop()
 
 def main():
 

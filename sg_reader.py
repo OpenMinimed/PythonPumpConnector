@@ -50,6 +50,11 @@ class SGReader:
         self._configure_characteristics()
         return
 
+    def unsubscribe(self):
+        self.cgm_measurement.add_characteristic_cb(None)
+        self.cgm_racp.add_characteristic_cb(None)
+        return
+    
     def get_value(self, timeout:int=3) -> float | None:
         self.measurement_received = threading.Event()
 

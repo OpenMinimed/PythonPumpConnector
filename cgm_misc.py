@@ -23,6 +23,10 @@ class CgmMiscData:
         self._configure_characteristics()
         return
     
+    def unsubscribe(self):
+        # intentionally empty, since we have no callbacks!
+        return
+
     def read_run_time(self) -> None | int:
     
         read = self.run_time_char.read_raw_value()
