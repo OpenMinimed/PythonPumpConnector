@@ -7,6 +7,7 @@ import logging
 import threading
 import argparse
 import traceback
+import pickle
 
 from bluezero import adapter
 from bluezero.device import Device
@@ -122,21 +123,33 @@ def print_help():
         print(f"  {k}: {desc}")
     return
 
-def read_history():
-    hr.get_available_record_count()
-    return
+def save_history():
+    records = hr.get_last_n_records(300)
+    with open("history_data.pickle", "w") as f:
+        for r in records:
+            d = pickle.dumps(r)
+            f.write(d.hex() + "\n")
 
 def setup_actions():
     global actions
     
     actions = {
+        'h': ('Show help/commands', lambda: print_help()),
         'r': ('Reload all modules', lambda: reload_modules()),
+
         '1': ('Read SG value', lambda: sgr.get_value()),
         '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
         '3': ('Read start time', lambda: cgmm.read_start_time()),
+
         '4': ('Get pump certificate', lambda: certman.send_request()),
-        '5': ('Read IDD history', lambda: read_history()),
-        'h': ('Show help/commands', lambda: print_help()),
+
+        '5': ('Read IDD record count', lambda: hr.get_available_record_count()),
+        '6': ('Read IDD last record', lambda: hr.get_last_record()),
+        '7': ('Read IDD first record', lambda: hr.get_first_record()),
+        '8': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
+        '9': ('Save IDD history of 300 records to a file', lambda: save_history()),
+
+
     }
 
 def main_input_loop():
@@ -149,7 +162,8 @@ def main_input_loop():
                 actions[key][1]()
                 print_help()
             except Exception as e:
-                print(f"Action '{actions[key][0]}' failed: {e} {traceback.print_exc()}")
+                trace = traceback.print_exc()
+                print(f"Action '{actions[key][0]}' failed: {e} {trace if trace is not None else ''}")
         elif key:
             print(f"Unknown key: {key}. Press 'h' for help.")
 

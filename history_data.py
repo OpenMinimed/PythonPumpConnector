@@ -1,8 +1,8 @@
 import crc
 import logging
+import pickle
 
 from log_manager import LogManager
-
 
 class HistoryData:
     """IDD History Data Record (Bluetooth LE)
@@ -95,6 +95,7 @@ class HistoryData:
         value = int.from_bytes(data[0:n], "little")
         return value, data[n:]
 
+    # TODO: use value converter helper here
     @staticmethod
     def e2e_crc(data: bytes) -> int:
         calc = crc.Calculator(crc.Configuration(
@@ -119,3 +120,6 @@ if __name__ == "__main__":
     else:
         print("Failed to parse history data record")
 
+    data = pickle.dumps(m)
+    print(f"pickle dump = {data.hex()}")
+    data2 = pickle.loads(data)
