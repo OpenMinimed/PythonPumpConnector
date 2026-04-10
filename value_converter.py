@@ -37,6 +37,10 @@ class ValueConverter():
         crc_calculated = ValueConverter.e2e_crc(data)
         crc_rcv = int.from_bytes(crc_rcv, byteorder="little")
         return crc_rcv == crc_calculated
+
+    def sign_extend(value:int, bits=8) -> int:
+        sign_bit = 1 << (bits - 1)
+        return value - (1 << bits) if value & sign_bit else value
     
 
 if __name__ == "__main__":

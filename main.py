@@ -139,15 +139,18 @@ def setup_actions():
 
         '1': ('Read SG value', lambda: sgr.get_value()),
         '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
-        '3': ('Read start time', lambda: cgmm.read_start_time()),
 
-        '4': ('Get pump certificate', lambda: certman.send_request()),
+        '3': ('Read CGM run time', lambda: cgmm.read_run_time()),
+        '4': ('Read CGM start time', lambda: cgmm.read_start_time()),
+        '5': ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
 
-        '5': ('Read IDD record count', lambda: hr.get_available_record_count()),
-        '6': ('Read IDD last record', lambda: hr.get_last_record()),
-        '7': ('Read IDD first record', lambda: hr.get_first_record()),
-        '8': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
-        '9': ('Save IDD history of 300 records to a file', lambda: save_history()),
+        # '6': ('Get pump certificate', lambda: certman.send_request()),
+
+        '7': ('Read IDD record count', lambda: hr.get_available_record_count()),
+        '8': ('Read IDD last record', lambda: hr.get_last_record()),
+        '9': ('Read IDD first record', lambda: hr.get_first_record()),
+        '10': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
+        '11': ('Save IDD history of 300 records to a file', lambda: save_history()),
 
 
     }
