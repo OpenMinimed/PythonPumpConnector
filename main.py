@@ -34,6 +34,7 @@ socpc = None
 cgmm = None
 certman = None
 hr = None
+hatss = None
 
 # Actions dict
 actions = {}
@@ -48,13 +49,14 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr
+    global sgr, socpc, cgmm, certman, hr, hatss
 
     from sg_reader import SGReader
     from socp import SocpController
     from cgm_misc import CgmMiscData
     from cm import CertificateManagement
     from history_reader import HistoryReader
+    from hats import HATS
 
     sgr = SGReader(pump)
     logging.info("sg reader created")
@@ -66,10 +68,15 @@ def initialize_components(pump):
     logging.info("CertificateManagement created")
     hr = HistoryReader(pump)
     logging.info("HistoryReader created")
+    hatss = HATS(pump)
+    logging.info("HATS created")
+
+    return    
+
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr
+    global sgr, socpc, cgmm, certman, hr, hatss
     
     # fix for duplicated notifications in case of reload 
     # see https://github.com/ukBaz/python-bluezero/issues/342
@@ -79,6 +86,7 @@ def unsubscribe_components():
     cgmm.unsubscribe()
     certman.unsubscribe()
     hr.unsubscribe()
+    hatss.unsubscribe()
 
     return
 
@@ -91,7 +99,8 @@ def reload_modules():
         'socp',
         'cgm_misc',
         'cm',
-        'history_reader'
+        'history_reader',
+        'hats'
     ]
 
     logging.info("Unsubscribing components...")
@@ -137,20 +146,21 @@ def setup_actions():
         'h': ('Show help/commands', lambda: print_help()),
         'r': ('Reload all modules', lambda: reload_modules()),
 
-        '1': ('Read SG value', lambda: sgr.get_value()),
+        '1': ('Read sensor glucose value', lambda: sgr.get_value()),
         '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
 
         '3': ('Read CGM run time', lambda: cgmm.read_run_time()),
         '4': ('Read CGM start time', lambda: cgmm.read_start_time()),
         '5': ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
 
-        # '6': ('Get pump certificate', lambda: certman.send_request()),
+        '6': ('Send certificate mgmt request', lambda: certman.send_request()),
+        '7': ('Send HATS request', lambda: hatss.send_request()),
 
-        '7': ('Read IDD record count', lambda: hr.get_available_record_count()),
-        '8': ('Read IDD last record', lambda: hr.get_last_record()),
-        '9': ('Read IDD first record', lambda: hr.get_first_record()),
-        '10': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
-        '11': ('Save IDD history of 300 records to a file', lambda: save_history()),
+        '8': ('Read IDD record count', lambda: hr.get_available_record_count()),
+        '9': ('Read IDD last record', lambda: hr.get_last_record()),
+        '10': ('Read IDD first record', lambda: hr.get_first_record()),
+        '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
+        '12': ('Save IDD history of 300 records to a file', lambda: save_history()),
 
 
     }

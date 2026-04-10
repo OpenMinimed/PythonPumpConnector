@@ -13,9 +13,9 @@ UUID_RMCPSE_CHAR       = "00000370-0000-1000-0000-009132591325"
 UUID_RACP_CHAR         = "00002a52-0000-1000-8000-00805f9b34fb"
 
 
-class HATS:
-    """History And Trace Service
-
+class HATS():
+    """
+    History And Trace Service
     """
 
     def __init__(self, central:Central):
@@ -29,6 +29,13 @@ class HATS:
 
         success = self._configure_characteristics()
         assert success == True
+
+    def unsubscribe(self):
+        self.hat_slice_record.add_characteristic_cb(None)
+        self.hat_rtmcp.add_characteristic_cb(None)
+        self.hat_rmcpse.add_characteristic_cb(None)
+        self.hat_racp.add_characteristic_cb(None)
+        return
 
     def send_request(self):
         ## RTMCP char
