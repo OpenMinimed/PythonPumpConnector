@@ -107,7 +107,7 @@ class CGMMeasurement:
         self.cal_temp    = cal_temp
         self.warning     = warning
         self.trend       = trend
-        self.quality     = quality
+        self.quality     = quality # TODO: 100% is 10.0 ?? we need a bad quality signal to check this
         return True
 
     def __str__(self):

@@ -61,7 +61,8 @@ class SocpController():
         self.logger.debug("socp notifications enabled")
         return
     
-    def read_session_id(self) -> int | None:
+    def _read_session_id(self) -> int | None:
+        raise NotImplementedError()
         # NOTE! this is not supported on the pump, only the sensor (?) 
 
         # 1c 8c 02 2984
@@ -75,7 +76,8 @@ class SocpController():
         toret = int.from_bytes(data, byteorder="little") # TODO: endianness?
         return toret
     
-    def read_session_start(self, session_id:int) -> None:
+    def _read_session_start(self, session_id:int) -> None:
+        raise NotImplementedError()
         # NOTE: this is not supported on the pump, only the sensor (?) 
         # buildReadSessionStartTimeRequest() is never called by the Minimed app.
         # dies with Operation failed with ATT error: 0x80 (Application Error ???)
