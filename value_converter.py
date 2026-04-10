@@ -38,9 +38,17 @@ class ValueConverter():
         crc_rcv = int.from_bytes(crc_rcv, byteorder="little")
         return crc_rcv == crc_calculated
 
+    @staticmethod
     def sign_extend(value:int, bits=8) -> int:
         sign_bit = 1 << (bits - 1)
         return value - (1 << bits) if value & sign_bit else value
+    
+    @staticmethod
+    def consume(data: bytes, n: int) -> tuple[int, bytes]:
+        # NOTE: copying this bytes object every time is rather wasteful
+        assert n <= len(data)
+        value = int.from_bytes(data[0:n], "little")
+        return value, data[n:]
     
 
 if __name__ == "__main__":

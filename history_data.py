@@ -5,6 +5,7 @@ import pickle
 from enum import IntEnum
 
 from log_manager import LogManager
+from value_converter import ValueConverter
 
 # Good resources: HistoryEventDataConvertersFactory
 
@@ -81,30 +82,26 @@ class HistoryData:
         # TODO: Actually test this! This was not yet tested since the pump
         #       never uses E2E-Protection in this service.
         if self.use_e2e:
-            # extract and snip E2E-CRC from record (its last 2 bytes)
-            crc = int.from_bytes(data[-2:], "little")
-            data = data[:-2]
 
-            # CRC of the remaining record
-            computed_crc = self.e2e_crc(data)
-
-            if crc != computed_crc:
-                self.logger.error("E2E-CRC mismatch: computed %04x, got %04x"
-                    % (computed_crc, crc))
+            if not ValueConverter.check_crc(data):
+                self.logger.error("E2E-CRC mismatch")
                 return False
+            
+            # snip crc
+            data = data[:-2] 
 
             # snip E2E-Counter from record (we had to keep it until now
             # because it must be included in the CRC)
             data = data[:-1]
 
         # mandatory fields
-        event_type_int, data = self._consume(data, 2)
+        event_type_int, data = ValueConverter.consume(data, 2)
         try:
             self.event_type = HistoryEventType(event_type_int)
         except ValueError:
             self.event_type = HistoryEventType.UNDEFINED
-        self.sequence_number, data = self._consume(data, 4)
-        self.relative_offset, data = self._consume(data, 2)
+        self.sequence_number, data = ValueConverter.consume(data, 4)
+        self.relative_offset, data = ValueConverter.consume(data, 2)
         self.event_data,      data = data, []
         # TODO: parse event data
 
@@ -125,37 +122,10 @@ class HistoryData:
             f"Event Data:      {self.event_data.hex()}",
         ]) + "\n)"
 
-    @staticmethod
-    def _consume(data: bytes, n: int) -> int:
-        # NOTE: copying this bytes object every time is rather wasteful
-        assert n <= len(data)
-        value = int.from_bytes(data[0:n], "little")
-        return value, data[n:]
-
-    # TODO: use value converter helper here
-    @staticmethod
-    def e2e_crc(data: bytes) -> int:
-        calc = crc.Calculator(crc.Configuration(
-            width=16,
-            polynomial=0x1021,
-            init_value=0xffff,
-            final_xor_value=0,
-            reverse_input=False,
-            reverse_output=False,
-        ))
-        return calc.checksum(data)
 
 
 if __name__ == "__main__":
     LogManager.init(level=logging.DEBUG)
-
-    # #data = bytes.fromhex("660048e80000ea0406005a")
-    # data = bytes.fromhex("01f089d20000150b18404b4cf8")
-    # m = HistoryData(data)
-    # if m.parse():
-    #     print(m)
-    # else:
-    #     print("Failed to parse history data record")
 
     parsed = [] # type: list[HistoryData]
     with open("history_data.pickle", "r") as f:
@@ -166,7 +136,13 @@ if __name__ == "__main__":
             hd = pickle.loads(d)
             parsed.append(hd)
 
+    types = []
     for record in parsed:
         print(record)
+        if record.event_type.name not in types:
+            types.append(record.event_type.name)
     
     print(f"parsed {len(parsed)} objects from dump file")
+    print("types in the dump:")
+    for t in types:
+        print(f" {t}")

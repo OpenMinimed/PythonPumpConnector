@@ -56,10 +56,10 @@ class CGMMeasurement:
 
 
         # mandatory fields
-        size,    data = self._consume(data, 1)
-        flags,   data = self._consume(data, 1)
-        glucose, data = self._consume(data, 2)
-        offset,  data = self._consume(data, 2)
+        size,    data = ValueConverter.consume(data, 1)
+        flags,   data = ValueConverter.consume(data, 1)
+        glucose, data = ValueConverter.consume(data, 2)
+        offset,  data = ValueConverter.consume(data, 2)
 
         if length != size:
             self.logger.error("Record length %d does not match size field %d"
@@ -72,26 +72,26 @@ class CGMMeasurement:
 
         status = 0
         if flags & 0x80:  # Status-Octet present
-            status, data = self._consume(data, 1)
+            status, data = ValueConverter.consume(data, 1)
 
         cal_temp = 0
         if flags & 0x40:  # Cal/Temp-Octet present
-            cal_temp, data = self._consume(data, 1)
+            cal_temp, data = ValueConverter.consume(data, 1)
 
         warning = 0
         if flags & 0x20:  # Warning-Octet present
-            warning, data = self._consume(data, 1)
+            warning, data = ValueConverter.consume(data, 1)
 
         # CGM Trend Information (optional)
         trend = None
         if flags & 0x01:  # CGM Trend Information present
-            trend, data = self._consume(data, 2)
+            trend, data = ValueConverter.consume(data, 2)
             trend = ValueConverter.decode_sfloat(trend)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
-            quality, data = self._consume(data, 2)
+            quality, data = ValueConverter.consume(data, 2)
             quality = ValueConverter.decode_sfloat(quality)
 
         # we are done, there must not be any data left in the record
@@ -125,12 +125,7 @@ class CGMMeasurement:
                 + ("--" if self.quality is None else f"{self.quality} %"),
         ]) + "\n)"
 
-    @staticmethod
-    def _consume(data: bytes, n: int) -> tuple[int, bytes]:
-        # NOTE: copying this bytes object every time is rather wasteful
-        assert n <= len(data)
-        value = int.from_bytes(data[0:n], "little")
-        return value, data[n:]
+
 
 
 if __name__ == "__main__":
