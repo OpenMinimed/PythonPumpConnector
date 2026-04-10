@@ -7,10 +7,7 @@ import time
 from cgm_measurement import CGMMeasurement
 from log_manager import LogManager
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sake_handler import SakeHandler
+from sake_handler import SakeHandler
 
 UUID_CGM_SERVICE      = "0000181f-0000-1000-8000-00805f9b34fb"
 UUID_MEASUREMENT_CHAR = "00002aa7-0000-1000-8000-00805f9b34fb"
@@ -18,7 +15,9 @@ UUID_RACP_CHAR        = "00002a52-0000-1000-8000-00805f9b34fb"
 
 
 class SGReader:
-    """Test for reading an SG value through the pump's CGM service
+
+    """
+    Test for reading an SG value through the pump's CGM service
 
     The latest record is requested on the Record Access Control Point.
     We then expect the pump to answer with a CGM Measurement and to send
@@ -46,10 +45,17 @@ class SGReader:
         self.record:bytearray   = None
         self.response = None
 
-        success = self._configure_characteristics()
-        assert success == True
+        self.sh = SakeHandler()
 
-    def get_value(self, sh:"SakeHandler", timeout:int=3) -> float | None:
+        self._configure_characteristics()
+        return
+
+    def unsubscribe(self):
+        self.cgm_measurement.add_characteristic_cb(None)
+        self.cgm_racp.add_characteristic_cb(None)
+        return
+    
+    def get_value(self, timeout:int=3) -> float | None:
         self.measurement_received = threading.Event()
 
         self.logger.info("Requesting last stored record")
@@ -72,7 +78,9 @@ class SGReader:
             return None
 
         # decrypt the record
-        data = sh.server.session.server_crypt.decrypt(bytes(self.record))
+        #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
+        data = self.sh.server.session.server_crypt.decrypt(bytes(self.record))
+        #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
 
         # parse received record
         #
@@ -103,68 +111,43 @@ class SGReader:
 
         return float(measurement_record.glucose)
 
-    @staticmethod
-    def as_f16(value) -> int | float:
-        e = (value & 0xf000) >> 12
-        m = (value & 0x0fff)
-        if e & 0x8:
-            e = e - 0x10
-        if m & 0x800:
-            m = m - 0x1000
-        return m * 10**e
-    
-    @staticmethod
-    def mgdl_to_mmolL(value_mgdl):
-        molar_mass = 180.156
-        return round((value_mgdl * 10) / molar_mass, 2)
 
     def _configure_characteristics(self):
-        try:
-            # CGM service, CGM Measurement characteristic
-            self.logger.info("Adding characteristic CGM Measurement")
-            self.cgm_measurement = self.central.add_characteristic(
-                UUID_CGM_SERVICE, UUID_MEASUREMENT_CHAR)
-            while not self.cgm_measurement.resolve_gatt():
-                time.sleep(0.2)
-            assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
-            self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
-            self.logger.debug("measurement_cb added")
-            self.cgm_measurement.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic CGM Measurement")
-            self.logger.error(e)
-            return False
 
-        try:
-            # CGM service, Record Access Control Point characteristic
-            self.logger.info("Adding characteristic RACP")
-            self.cgm_racp = self.central.add_characteristic(
-                UUID_CGM_SERVICE, UUID_RACP_CHAR)
-            while not self.cgm_racp.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-            self.cgm_racp.add_characteristic_cb(self._racp_cb)
-            self.logger.debug("racp_cb added")
-            self.cgm_racp.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RACP")
-            self.logger.error(e)
-            return False
+        # CGM service, CGM Measurement characteristic
+        self.logger.info("Adding characteristic CGM Measurement")
+        self.cgm_measurement = self.central.add_characteristic(
+            UUID_CGM_SERVICE, UUID_MEASUREMENT_CHAR)
+        while not self.cgm_measurement.resolve_gatt():
+            time.sleep(0.2)
+        assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
+        self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
+        self.logger.debug("measurement_cb added")
+        self.cgm_measurement.start_notify()
 
-        return True
+        # CGM service, Record Access Control Point characteristic
+        self.logger.info("Adding characteristic RACP")
+        self.cgm_racp = self.central.add_characteristic(
+            UUID_CGM_SERVICE, UUID_RACP_CHAR)
+        while not self.cgm_racp.resolve_gatt():
+            time.sleep(0.2)
+        assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
+        assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
+        self.cgm_racp.add_characteristic_cb(self._racp_cb)
+        self.logger.debug("racp_cb added")
+        self.cgm_racp.start_notify()
+    
+        return
 
     def _racp_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:
-            self.logger.debug("CGM RACP indication: "
-                + str(dbus_tools.dbus_to_python(changed_props)))
             self.response = dbus_tools.dbus_to_python(changed_props["Value"])
+            self.logger.debug("CGM RACP indication: " + self.response.hex())
             self.operation_finished.set()
 
     def _measurement_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:
-            self.logger.debug("CGM Measurement notification: "
-                + str(dbus_tools.dbus_to_python(changed_props)))
             self.record = dbus_tools.dbus_to_python(changed_props["Value"])
+            self.logger.debug("CGM Measurement notification: " + self.record.hex())
             self.measurement_received.set()
 

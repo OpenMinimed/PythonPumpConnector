@@ -6,7 +6,8 @@ add_submodule_to_path() # bit of hacking ;)
 import logging
 import threading
 import argparse
-import time
+import traceback
+import pickle
 
 from bluezero import adapter
 from bluezero.device import Device
@@ -19,46 +20,187 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 
-from hats import HATS
-# from socp import SocpController
+import importlib
+import sys
 
-ph:PeripheralHandler = None
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
+pump = None
 
-def main_logic():
+# Component instances
+sgr = None
+socpc = None
+cgmm = None
+certman = None
+hr = None
 
-    first = True
-    sg_reader: SGReader = None
-    last_read = None
+# Actions dict
+actions = {}
+
+# HOW TO ADD A NEW MODULE:
+# 1. Add global variable declaration at module level (e.g., new_component = None)
+# 2. Add import in initialize_components() function
+# 3. Instantiate in initialize_components() function
+# 4. Add module name to modules_to_reload list in reload_modules()
+# 5. Add unsubscribe call in unsubscribe_components()
+# 6. Add action in setup_actions() function
+
+def initialize_components(pump):
+
+    global sgr, socpc, cgmm, certman, hr
+
+    from sg_reader import SGReader
+    from socp import SocpController
+    from cgm_misc import CgmMiscData
+    from cm import CertificateManagement
+    from history_reader import HistoryReader
+
+    sgr = SGReader(pump)
+    logging.info("sg reader created")
+    socpc = SocpController(pump)
+    logging.info("SocpController created")
+    cgmm = CgmMiscData(pump)
+    logging.info("CgmMiscData created")
+    certman = CertificateManagement(pump)
+    logging.info("CertificateManagement created")
+    hr = HistoryReader(pump)
+    logging.info("HistoryReader created")
+
+def unsubscribe_components():
+
+    global sgr, socpc, cgmm, certman, hr
+    
+    # fix for duplicated notifications in case of reload 
+    # see https://github.com/ukBaz/python-bluezero/issues/342
+
+    sgr.unsubscribe()
+    socpc.unsubscribe()
+    cgmm.unsubscribe()
+    certman.unsubscribe()
+    hr.unsubscribe()
+
+    return
+
+def reload_modules():
+
+    global actions, pump
+
+    modules_to_reload = [
+        'sg_reader',
+        'socp',
+        'cgm_misc',
+        'cm',
+        'history_reader'
+    ]
+
+    logging.info("Unsubscribing components...")
+    unsubscribe_components()
+        
+    # Clear actions dict first to break closures holding references
+    actions.clear()
+    
+    # Remove modules from sys.modules and reimport
+    for mod_name in modules_to_reload:
+        try:
+            if mod_name in sys.modules:
+                del sys.modules[mod_name]
+            importlib.import_module(mod_name)
+            logging.info(f"Reloaded: {mod_name}")
+        except Exception as e:
+            logging.error(f"Reload failed for {mod_name}: {e}")
+    
+    # Reinitialize components and actions
+    initialize_components(pump)
+    setup_actions()
+    logging.info("Components re-initialized")
+    return
+
+def print_help():
+    print("\n\n" + "="*40)
+    print("Available commands:")
+    for k, (desc, _) in actions.items():
+        print(f"  {k}: {desc}")
+    return
+
+def save_history():
+    records = hr.get_last_n_records(300)
+    with open("history_data.pickle", "w") as f:
+        for r in records:
+            d = pickle.dumps(r)
+            f.write(d.hex() + "\n")
+
+def setup_actions():
+    global actions
+    
+    actions = {
+        'h': ('Show help/commands', lambda: print_help()),
+        'r': ('Reload all modules', lambda: reload_modules()),
+
+        '1': ('Read SG value', lambda: sgr.get_value()),
+        '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
+
+        '3': ('Read CGM run time', lambda: cgmm.read_run_time()),
+        '4': ('Read CGM start time', lambda: cgmm.read_start_time()),
+        '5': ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
+
+        # '6': ('Get pump certificate', lambda: certman.send_request()),
+
+        '7': ('Read IDD record count', lambda: hr.get_available_record_count()),
+        '8': ('Read IDD last record', lambda: hr.get_last_record()),
+        '9': ('Read IDD first record', lambda: hr.get_first_record()),
+        '10': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
+        '11': ('Save IDD history of 300 records to a file', lambda: save_history()),
+
+
+    }
+
+def main_input_loop():
 
     while True:
+        print("\n> ", end='')
+        key = input().strip().lower()
+        if key in actions:
+            try:
+                actions[key][1]()
+                print_help()
+            except Exception as e:
+                trace = traceback.print_exc()
+                print(f"Action '{actions[key][0]}' failed: {e} {trace if trace is not None else ''}")
+        elif key:
+            print(f"Unknown key: {key}. Press 'h' for help.")
 
+def main_logic():
+    global sgr, socpc, cgmm, certman, hr, pump
+
+    initialized = False
+
+    while True:
+        # dont waste cpu cycles
         sleep(0.1)
         
-        # SAKE handshake must have been completed
+        # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
 
-        # connection to pump must have been established
-        # GATT discovery must have been completed
+        # connection to pump must have been established and GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
-
-        if first:
-            logging.info("welcome from the main logic!")
-            first = False
+        
+        # initialize stuff if not already
+        if not initialized:
+            initialized = True
             assert device.services_resolved
 
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            hats = HATS(pump)
-            hats.send_request()
+            initialize_components(pump)
+            setup_actions()
 
-        # TODO: put some ipython here for testing or something
-    
+            # Run main input loop
+            print_help()
+            main_input_loop()
 
 def main():
 
