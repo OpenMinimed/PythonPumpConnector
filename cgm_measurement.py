@@ -1,6 +1,7 @@
 import logging
 
 from log_manager import LogManager
+from parse_utils import ParseUtils
 from value_converter import ValueConverter
 
 
@@ -56,10 +57,10 @@ class CGMMeasurement:
 
 
         # mandatory fields
-        size,    data = ValueConverter.consume(data, 1)
-        flags,   data = ValueConverter.consume(data, 1)
-        glucose, data = ValueConverter.consume(data, 2)
-        offset,  data = ValueConverter.consume(data, 2)
+        size,    data = ParseUtils.consume(data, 1)
+        flags,   data = ParseUtils.consume(data, 1)
+        glucose, data = ParseUtils.consume(data, 2)
+        offset,  data = ParseUtils.consume(data, 2)
 
         if length != size:
             self.logger.error("Record length %d does not match size field %d"
@@ -72,26 +73,26 @@ class CGMMeasurement:
 
         status = 0
         if flags & 0x80:  # Status-Octet present
-            status, data = ValueConverter.consume(data, 1)
+            status, data = ParseUtils.consume(data, 1)
 
         cal_temp = 0
         if flags & 0x40:  # Cal/Temp-Octet present
-            cal_temp, data = ValueConverter.consume(data, 1)
+            cal_temp, data = ParseUtils.consume(data, 1)
 
         warning = 0
         if flags & 0x20:  # Warning-Octet present
-            warning, data = ValueConverter.consume(data, 1)
+            warning, data = ParseUtils.consume(data, 1)
 
         # CGM Trend Information (optional)
         trend = None
         if flags & 0x01:  # CGM Trend Information present
-            trend, data = ValueConverter.consume(data, 2)
+            trend, data = ParseUtils.consume(data, 2)
             trend = ValueConverter.decode_sfloat(trend)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
-            quality, data = ValueConverter.consume(data, 2)
+            quality, data = ParseUtils.consume(data, 2)
             quality = ValueConverter.decode_sfloat(quality)
 
         # we are done, there must not be any data left in the record

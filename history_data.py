@@ -5,6 +5,7 @@ import pickle
 from enum import IntEnum
 
 from log_manager import LogManager
+from parse_utils import ParseUtils
 from value_converter import ValueConverter
 
 # Good resources: HistoryEventDataConvertersFactory
@@ -95,13 +96,13 @@ class HistoryData:
             data = data[:-1]
 
         # mandatory fields
-        event_type_int, data = ValueConverter.consume(data, 2)
+        event_type_int, data = ParseUtils.consume(data, 2)
         try:
             self.event_type = HistoryEventType(event_type_int)
         except ValueError:
             self.event_type = HistoryEventType.UNDEFINED
-        self.sequence_number, data = ValueConverter.consume(data, 4)
-        self.relative_offset, data = ValueConverter.consume(data, 2)
+        self.sequence_number, data = ParseUtils.consume(data, 4)
+        self.relative_offset, data = ParseUtils.consume(data, 2)
         self.event_data,      data = data, []
         # TODO: parse event data
 
