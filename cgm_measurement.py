@@ -59,15 +59,13 @@ class CGMMeasurement:
         # mandatory fields
         size,    data = ParseUtils.consume(data, 1)
         flags,   data = ParseUtils.consume(data, 1)
-        glucose, data = ParseUtils.consume(data, 2)
+        glucose, data = ParseUtils.consume_f16(data)
         offset,  data = ParseUtils.consume(data, 2)
 
         if length != size:
             self.logger.error("Record length %d does not match size field %d"
                 % (length, size))
             return False
-
-        glucose = ValueConverter.decode_medfloat16(glucose)
 
         # Sensor Status Annunciation (optional)
 
@@ -86,14 +84,12 @@ class CGMMeasurement:
         # CGM Trend Information (optional)
         trend = None
         if flags & 0x01:  # CGM Trend Information present
-            trend, data = ParseUtils.consume(data, 2)
-            trend = ValueConverter.decode_medfloat16(trend)
+            trend, data = ParseUtils.consume_f16(data)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
-            quality, data = ParseUtils.consume(data, 2)
-            quality = ValueConverter.decode_medfloat16(quality)
+            quality, data = ParseUtils.consume_f16(data)
 
         # we are done, there must not be any data left in the record
         if len(data) > 0:

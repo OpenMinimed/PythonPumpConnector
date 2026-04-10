@@ -8,3 +8,16 @@ class ParseUtils():
         assert n <= len(data)
         value = int.from_bytes(data[0:n], "little")
         return value, data[n:]
+
+    @staticmethod
+    def consume_f16(data: bytes) -> tuple[float, bytes]:
+        value, data = __class__.consume(data, 2)
+        value = ValueConverter.decode_medfloat16(value)
+        return value, data
+
+    @staticmethod
+    def consume_f32(data: bytes) -> tuple[float, bytes]:
+        value, data = __class__.consume(data, 4)
+        value = ValueConverter.decode_medfloat32(value)
+        return value, data
+

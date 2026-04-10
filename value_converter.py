@@ -11,7 +11,17 @@ class ValueConverter():
         if m & 0x800:
             m = m - 0x1000
         return float(m * 10**e)
-    
+
+    @staticmethod
+    def decode_medfloat32(value):
+        e = (value & 0xff000000) >> 24
+        m = (value & 0x00ffffff)
+        if e & 0x80:
+            e = e - 0x100
+        if m & 0x800000:
+            m = m - 0x1000000
+        return m * 10**e
+
     @staticmethod
     def mgdl_to_mmolL(value_mgdl:float) -> float:
         molar_mass = 180.156
