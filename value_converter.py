@@ -3,7 +3,7 @@ import crc
 class ValueConverter():
     
     @staticmethod
-    def decode_sfloat(value) -> float:
+    def decode_medfloat16(value) -> float:
         e = (value & 0xf000) >> 12
         m = (value & 0x0fff)
         if e & 0x8:

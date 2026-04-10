@@ -67,7 +67,7 @@ class CGMMeasurement:
                 % (length, size))
             return False
 
-        glucose = ValueConverter.decode_sfloat(glucose)
+        glucose = ValueConverter.decode_medfloat16(glucose)
 
         # Sensor Status Annunciation (optional)
 
@@ -87,13 +87,13 @@ class CGMMeasurement:
         trend = None
         if flags & 0x01:  # CGM Trend Information present
             trend, data = ParseUtils.consume(data, 2)
-            trend = ValueConverter.decode_sfloat(trend)
+            trend = ValueConverter.decode_medfloat16(trend)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
             quality, data = ParseUtils.consume(data, 2)
-            quality = ValueConverter.decode_sfloat(quality)
+            quality = ValueConverter.decode_medfloat16(quality)
 
         # we are done, there must not be any data left in the record
         if len(data) > 0:
