@@ -508,12 +508,11 @@ class BgReadingData(HistoryEventData):
         return True, data
 
     def __str__(self):
-        # NOTE: add unit for time offset
         mgdl  = ValueConverter.kgl_to_mgdl(self.bg_value)
         mmolL = ValueConverter.mgdl_to_mmolL(mgdl)
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Time Offset: {self.time_offset}",
+            f"Time Offset: {self.time_offset} min",
             f"BG Value:    {self.bg_value} kg/L ({mgdl} mg/dL, {mmolL} mmol/L)",
         ]) + "\n)"
 
@@ -535,12 +534,11 @@ class CalibrationData(HistoryEventData):
         return True, data
 
     def __str__(self):
-        # TODO: add time offset unit
         mgdl  = ValueConverter.kgl_to_mgdl(self.bg_measurement)
         mmolL = ValueConverter.mgdl_to_mmolL(mgdl)
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Time Offset:    {self.time_offset}",
+            f"Time Offset:    {self.time_offset} min",
             f"BG Measurement: {self.bg_measurement} kg/L ({mgdl} mg/dL, {mmolL} mmol/L)",
         ]) + "\n)"
 
@@ -621,10 +619,9 @@ class SGMeasurementData(HistoryEventData):
         return True, data
 
     def __str__(self):
-        # TODO: add time offset unit
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Time Offset: {self.time_offset}",
+            f"Time Offset: {self.time_offset} min",
             f"SG Value:    {self.sg_value} mg/dL",
             f"ISIG:        {self.isig}",
             f"V Counter:   {self.v_counter}",
@@ -650,10 +647,9 @@ class CGMAnalyticsData(HistoryEventData):
         return True, data
 
     def __str__(self):
-        # TODO: add time offset unit
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Time Offset: {self.time_offset}",
+            f"Time Offset: {self.time_offset} min",
             f"PSGV:        {self.psgv}",
             f"Cal Factor:  {self.cal_factor}",
         ]) + "\n)"
