@@ -1,5 +1,8 @@
 import crc
 
+from datetime import datetime
+
+
 class ValueConverter():
     
     @staticmethod
@@ -23,9 +26,22 @@ class ValueConverter():
         return m * 10**e
 
     @staticmethod
+    def decode_datetime(data: bytes):
+        assert len(data) == 7, \
+            "Expected date time to by exactly 7 bytes"
+        return datetime(
+            int.from_bytes(data[0:2], "little"), data[2], data[3],
+            data[4], data[5], data[6]
+        )
+
+    @staticmethod
     def mgdl_to_mmolL(value_mgdl:float) -> float:
         molar_mass = 180.156
         return round((value_mgdl * 10) / molar_mass, 1)
+
+    @staticmethod
+    def kgl_to_mgdl(value_kgl: float) -> float:
+        return 1e5 * value_kgl
 
     @staticmethod
     def e2e_crc(data: bytes) -> int:

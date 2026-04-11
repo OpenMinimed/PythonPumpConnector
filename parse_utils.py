@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from value_converter import ValueConverter
 
 
@@ -35,4 +37,11 @@ class ParseUtils():
         value, data = __class__.consume(data, 4)
         value = ValueConverter.decode_medfloat32(value)
         return value, data
+
+    @staticmethod
+    def consume_datetime(data: bytes) -> tuple[datetime, bytes]:
+        n = 7
+        assert n <= len(data)
+        value = ValueConverter.decode_datetime(data[0:n])
+        return value, data[n:]
 
