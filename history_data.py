@@ -501,7 +501,7 @@ class BgReadingData(HistoryEventData):
 
     def _parse_impl(self, data):
         # mandatory fields
-        self.time_offset, data = ParseUtils.consume_u16(data)
+        self.time_offset, data = ParseUtils.consume_i16(data)
         self.bg_value,    data = ParseUtils.consume_f16(data)
 
         return True, data
@@ -527,7 +527,7 @@ class CalibrationData(HistoryEventData):
 
     def _parse_impl(self, data):
         # mandatory fields
-        self.time_offset,    data = ParseUtils.consume_u16(data)
+        self.time_offset,    data = ParseUtils.consume_i16(data)
         self.bg_measurement, data = ParseUtils.consume_f16(data)
 
         return True, data
@@ -610,10 +610,10 @@ class SGMeasurementData(HistoryEventData):
 
     def _parse_impl(self, data):
         # mandatory fields
-        self.time_offset, data = ParseUtils.consume_u16(data)
+        self.time_offset, data = ParseUtils.consume_i16(data)
         self.sg_value,    data = ParseUtils.consume_u16(data)
         self.isig,        data = ParseUtils.consume_u16(data)
-        self.v_counter,   data = ParseUtils.consume_u16(data)
+        self.v_counter,   data = ParseUtils.consume_i16(data)
 
         return True, data
 
@@ -639,7 +639,7 @@ class CGMAnalyticsData(HistoryEventData):
 
     def _parse_impl(self, data):
         # mandatory fields
-        self.time_offset, data = ParseUtils.consume_u16(data)
+        self.time_offset, data = ParseUtils.consume_i16(data)
         self.psgv,        data = ParseUtils.consume_f16(data)
         self.cal_factor,  data = ParseUtils.consume_u16(data)
 
