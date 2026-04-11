@@ -850,12 +850,14 @@ class HistoryData:
         return True
 
     def __str__(self):
+        event_data = str(self.event_data).splitlines()
+        event_data = "\n    ".join(event_data)
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Event Type:      {self.event_type.name} (0x{self.event_type.value:04x})",
             f"Sequence Number: {self.sequence_number}",
             f"Relative Offset: {self.relative_offset} s",
-            f"Event Data:      {self.event_data.hex()}",
+            f"Event Data:      {event_data}",
         ]) + "\n)"
 
 
