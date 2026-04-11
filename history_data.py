@@ -618,10 +618,23 @@ class SGMeasurementData(HistoryEventData):
         return True, data
 
     def __str__(self):
+        # handle special SG values
+        sg = self.sg_value
+        if sg == 0x0301:
+            # TODO: figure out what this special value encodes
+            sg = f"{sg} mg/dL (0x{self.sg_value:04x})"
+        elif sg == 0x0303:
+            # TODO: figure out what this special value encodes
+            sg = f"{sg} mg/dL (0x{self.sg_value:04x})"
+        elif sg == 0x030d:
+            sg = "< 50 mg/dL"
+        else:
+            sg = f"{sg} mg/dL"
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Time Offset: {self.time_offset} min",
-            f"SG Value:    {self.sg_value} mg/dL",
+            f"SG Value:    {sg}",
             f"ISIG:        {self.isig}",
             f"V Counter:   {self.v_counter}",
         ]) + "\n)"
