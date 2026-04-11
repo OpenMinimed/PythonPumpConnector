@@ -210,7 +210,6 @@ class BolusDeliveredP1Data(HistoryEventData):
         return True, data
 
     def __str__(self):
-        # TODO: print named bolus type
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Bolus ID:                        {self.bolus_id}",
