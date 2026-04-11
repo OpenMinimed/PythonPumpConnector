@@ -1,6 +1,5 @@
 import crc
 import logging
-import pickle
 
 from enum import IntEnum
 
@@ -124,26 +123,31 @@ class HistoryData:
         ]) + "\n)"
 
 
-
 if __name__ == "__main__":
     LogManager.init(level=logging.DEBUG)
 
-    parsed = [] # type: list[HistoryData]
-    with open("history_data.pickle", "r") as f:
+    lines = []
+    with open("history_data.txt", "r") as f:
         lines = f.readlines()
-        for l in lines:
-            l = l.strip()
-            d = bytes.fromhex(l)
-            hd = pickle.loads(d)
-            parsed.append(hd)
+
+    parsed = [] # type: list[HistoryData]
+    for i,s in enumerate(lines):
+        data = bytes.fromhex(s.strip())
+        history_data = HistoryData(data)
+        if history_data.parse():
+            parsed.append(history_data)
+        else:
+            print(f"Failed to parse history data record in line {i+1}")
+            exit(-1)
 
     types = []
     for record in parsed:
         print(record)
         if record.event_type.name not in types:
             types.append(record.event_type.name)
-    
+
     print(f"parsed {len(parsed)} objects from dump file")
     print("types in the dump:")
     for t in types:
         print(f" {t}")
+
