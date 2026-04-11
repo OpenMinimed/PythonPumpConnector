@@ -10,6 +10,21 @@ class ParseUtils():
         return value, data[n:]
 
     @staticmethod
+    def consume_u8(data: bytes) -> tuple[int, bytes]:
+        value, data = __class__.consume(data, 1)
+        return value, data
+
+    @staticmethod
+    def consume_u16(data: bytes) -> tuple[int, bytes]:
+        value, data = __class__.consume(data, 2)
+        return value, data
+
+    @staticmethod
+    def consume_u32(data: bytes) -> tuple[int, bytes]:
+        value, data = __class__.consume(data, 4)
+        return value, data
+
+    @staticmethod
     def consume_f16(data: bytes) -> tuple[float, bytes]:
         value, data = __class__.consume(data, 2)
         value = ValueConverter.decode_medfloat16(value)
