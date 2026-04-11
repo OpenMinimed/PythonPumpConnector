@@ -5,10 +5,7 @@ import threading
 import time
 
 from log_manager import LogManager
-
-UUID_CM_SERVICE        = "00000600-0000-1000-0000-009132591325"
-UUID_CM_CP_CHAR        = "00000601-0000-1000-0000-009132591325"
-UUID_CM_DATA_CHAR      = "00000602-0000-1000-0000-009132591325"
+from uuids import UUID
 
 
 class CertificateManagement:
@@ -58,7 +55,7 @@ class CertificateManagement:
             # CM service, Certificate Management Control Point characteristic
             self.logger.info("Adding characteristic CMCP")
             chrc = self.central.add_characteristic(
-                UUID_CM_SERVICE, UUID_CM_CP_CHAR)
+                UUID.CM_SERVICE, UUID.CM_CP_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
@@ -75,7 +72,7 @@ class CertificateManagement:
             # CM service, Certificate Managment Data characteristic
             self.logger.info("Adding characteristic Data")
             chrc = self.central.add_characteristic(
-                UUID_CM_SERVICE, UUID_CM_DATA_CHAR)
+                UUID.CM_SERVICE, UUID.CM_DATA_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "write-without-response" in dbus_tools.dbus_to_python(chrc.flags)

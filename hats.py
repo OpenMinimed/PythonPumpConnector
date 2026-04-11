@@ -5,12 +5,7 @@ import threading
 import time
 
 from log_manager import LogManager
-
-UUID_HAT_SERVICE       = "00000300-0000-1000-0000-009132591325"
-UUID_SLICE_RECORD_CHAR = "00000350-0000-1000-0000-009132591325"
-UUID_RTMCP_CHAR        = "00000360-0000-1000-0000-009132591325"
-UUID_RMCPSE_CHAR       = "00000370-0000-1000-0000-009132591325"
-UUID_RACP_CHAR         = "00002a52-0000-1000-8000-00805f9b34fb"
+from uuids import UUID
 
 
 class HATS():
@@ -144,7 +139,7 @@ class HATS():
             # HAT service, Slice Record characteristic
             self.logger.info("Adding characteristic Slice Record")
             chrc = self.central.add_characteristic(
-                UUID_HAT_SERVICE, UUID_SLICE_RECORD_CHAR)
+                UUID.HAT_SERVICE, UUID.HAT_SLICE_RECORD_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "notify" in dbus_tools.dbus_to_python(chrc.flags)
@@ -160,7 +155,7 @@ class HATS():
             # HAT service, RTMCP characteristic
             self.logger.info("Adding characteristic RTMCP")
             chrc = self.central.add_characteristic(
-                UUID_HAT_SERVICE, UUID_RTMCP_CHAR)
+                UUID.HAT_SERVICE, UUID.HAT_RTMCP_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
@@ -177,7 +172,7 @@ class HATS():
             # HAT service, RMCPSE characteristic
             self.logger.info("Adding characteristic RMCP SE")
             chrc = self.central.add_characteristic(
-                UUID_HAT_SERVICE, UUID_RMCPSE_CHAR)
+                UUID.HAT_SERVICE, UUID.HAT_RMCPSE_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
@@ -194,7 +189,7 @@ class HATS():
             # HAT service, RACP characteristic
             self.logger.info("Adding characteristic RACP")
             chrc = self.central.add_characteristic(
-                UUID_HAT_SERVICE, UUID_RACP_CHAR)
+                UUID.HAT_SERVICE, UUID.HAT_RACP_CHAR)
             while not chrc.resolve_gatt():
                 time.sleep(0.2)
             assert "write"    in dbus_tools.dbus_to_python(chrc.flags)

@@ -8,10 +8,7 @@ from cgm_measurement import CGMMeasurement
 from log_manager import LogManager
 
 from sake_handler import SakeHandler
-
-UUID_CGM_SERVICE      = "0000181f-0000-1000-8000-00805f9b34fb"
-UUID_MEASUREMENT_CHAR = "00002aa7-0000-1000-8000-00805f9b34fb"
-UUID_RACP_CHAR        = "00002a52-0000-1000-8000-00805f9b34fb"
+from uuids import UUID
 
 
 class SGReader:
@@ -117,7 +114,7 @@ class SGReader:
         # CGM service, CGM Measurement characteristic
         self.logger.info("Adding characteristic CGM Measurement")
         self.cgm_measurement = self.central.add_characteristic(
-            UUID_CGM_SERVICE, UUID_MEASUREMENT_CHAR)
+            UUID.CGM_SERVICE, UUID.CGM_MEASUREMENT_CHAR)
         while not self.cgm_measurement.resolve_gatt():
             time.sleep(0.2)
         assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
@@ -128,7 +125,7 @@ class SGReader:
         # CGM service, Record Access Control Point characteristic
         self.logger.info("Adding characteristic RACP")
         self.cgm_racp = self.central.add_characteristic(
-            UUID_CGM_SERVICE, UUID_RACP_CHAR)
+            UUID.CGM_SERVICE, UUID.CGM_RACP_CHAR)
         while not self.cgm_racp.resolve_gatt():
             time.sleep(0.2)
         assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)

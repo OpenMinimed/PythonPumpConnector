@@ -9,10 +9,8 @@ from enum import IntEnum
 from history_data import HistoryData
 from log_manager import LogManager
 from sake_handler import SakeHandler
+from uuids import UUID
 
-UUID_IDD_SERVICE       = "00000100-0000-1000-0000-009132591325"
-UUID_HISTORY_DATA_CHAR = "00000108-0000-1000-0000-009132591325"
-UUID_RACP_CHAR         = "00002a52-0000-1000-8000-00805f9b34fb"
 
 class IddRacpOpCode(IntEnum):
     REPORT_RECORDS = 51,
@@ -228,7 +226,7 @@ class HistoryReader():
             # IDD service, IDD History Data characteristic
             self.logger.info("Adding characteristic IDD History Data")
             self.idd_history_data = self.central.add_characteristic(
-                UUID_IDD_SERVICE, UUID_HISTORY_DATA_CHAR)
+                UUID.IDD_SERVICE, UUID.IDD_HISTORY_DATA_CHAR)
             while not self.idd_history_data.resolve_gatt():
                 time.sleep(0.2)
             assert "notify" in dbus_tools.dbus_to_python(self.idd_history_data.flags)
@@ -243,7 +241,7 @@ class HistoryReader():
             # IDD service, Record Access Control Point characteristic
             self.logger.info("Adding characteristic RACP")
             self.idd_racp = self.central.add_characteristic(
-                UUID_IDD_SERVICE, UUID_RACP_CHAR)
+                UUID.IDD_SERVICE, UUID.IDD_RACP_CHAR)
             while not self.idd_racp.resolve_gatt():
                 time.sleep(0.2)
             assert "write"    in dbus_tools.dbus_to_python(self.idd_racp.flags)

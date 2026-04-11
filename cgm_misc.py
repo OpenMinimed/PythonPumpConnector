@@ -11,11 +11,7 @@ add_submodule_to_path()
 
 from value_converter import ValueConverter
 from sake_handler import SakeHandler
-from sg_reader import UUID_CGM_SERVICE
-
-
-UUID_RUN_TIME_CHAR = "00002aab-0000-1000-8000-00805f9b34fb"
-UUID_STAR_TIME_CHAR = "00002aaa-0000-1000-8000-00805f9b34fb"
+from uuids import UUID
 
 
 class CgmStartTime():
@@ -144,13 +140,13 @@ class CgmMiscData:
     def _configure_characteristics(self):
 
         self.run_time_char = self.central.add_characteristic(
-            UUID_CGM_SERVICE, UUID_RUN_TIME_CHAR)
+            UUID.CGM_SERVICE, UUID.CGM_SESSION_RUN_TIME_CHAR)
         while not self.run_time_char.resolve_gatt():
             time.sleep(0.2)
         assert "read" in dbus_tools.dbus_to_python(self.run_time_char.flags)
 
         self.start_time_char = self.central.add_characteristic(
-            UUID_CGM_SERVICE, UUID_STAR_TIME_CHAR)
+            UUID.CGM_SERVICE, UUID.CGM_SESSION_START_TIME_CHAR)
         while not self.start_time_char.resolve_gatt():
             time.sleep(0.2)
         assert "read" in dbus_tools.dbus_to_python(self.start_time_char.flags)
