@@ -687,8 +687,8 @@ class NGPReferenceTimeData(HistoryEventData):
     def __str__(self):
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Recording Reasons: {RecordingReason(self.recording_reason).name}",
-            f"Date Time:         {self.date_time}",
+            f"Recording Reason: {RecordingReason(self.recording_reason).name}",
+            f"Date Time:        {self.date_time}",
         ]) + "\n)"
 
 
