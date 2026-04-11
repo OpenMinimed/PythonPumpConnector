@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class ValueConverter():
-    
+
     @staticmethod
     def decode_medfloat16(value) -> float:
         e = (value & 0xf000) >> 12
@@ -13,17 +13,23 @@ class ValueConverter():
             e = e - 0x10
         if m & 0x800:
             m = m - 0x1000
-        return float(m * 10**e)
+        # NOTE: this is more complicated than just computing m * 10**e but it
+        #       produces floating-point numbers with less deviation from the
+        #       exact result
+        return float(f"{int(m)}e{e}")
 
     @staticmethod
-    def decode_medfloat32(value):
+    def decode_medfloat32(value) -> float:
         e = (value & 0xff000000) >> 24
         m = (value & 0x00ffffff)
         if e & 0x80:
             e = e - 0x100
         if m & 0x800000:
             m = m - 0x1000000
-        return m * 10**e
+        # NOTE: this is more complicated than just computing m * 10**e but it
+        #       produces floating-point numbers with less deviation from the
+        #       exact result
+        return float(f"{int(m)}e{e}")
 
     @staticmethod
     def decode_datetime(data: bytes):
@@ -55,7 +61,7 @@ class ValueConverter():
             reverse_output=False,
         ))
         return calc.checksum(data)
-    
+
     @staticmethod
     def check_crc(msg:bytes) -> bool:
         data = msg[0:-2]
@@ -68,10 +74,10 @@ class ValueConverter():
     def sign_extend(value:int, bits=8) -> int:
         sign_bit = 1 << (bits - 1)
         return value - (1 << bits) if value & sign_bit else value
-    
+
 
 if __name__ == "__main__":
 
     print(ValueConverter.check_crc(bytes.fromhex("ea07031c0a1f2a80ff0873")))
 
-    
+
