@@ -8,7 +8,7 @@ from enum import IntEnum
 from log_manager import LogManager
 from sake_handler import SakeHandler
 from value_converter import ValueConverter
-from sg_reader import UUID_CGM_SERVICE
+from uuids import UUID
 
 UUID_SOCP_CHAR        = "00002aac-0000-1000-8000-00805f9b34fb"
 
@@ -50,7 +50,7 @@ class SocpController():
     
     def _configure_characteristics(self):
         self.logger.debug("Adding SOCP char")
-        self.socp_char = self.central.add_characteristic(UUID_CGM_SERVICE, UUID_SOCP_CHAR)
+        self.socp_char = self.central.add_characteristic(UUID.CGM_SERVICE, UUID.CGM_SOCP_CHAR)
         while not self.socp_char.resolve_gatt():
             time.sleep(0.2)
         self.logger.debug(f"socp char flags = {self.socp_char.flags}")

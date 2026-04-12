@@ -1,6 +1,7 @@
-from enum import IntEnum
+from enum import StrEnum
 
-class UUID(IntEnum):
+class UUID(StrEnum):
+    
     # Continuous Glucose Measurement Service
     CGM_SERVICE                 = "0000181f-0000-1000-8000-00805f9b34fb"
     CGM_MEASUREMENT_CHAR        = "00002aa7-0000-1000-8000-00805f9b34fb"
