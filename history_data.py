@@ -56,7 +56,7 @@ class HistoryEventData:
         if len(data) > 0:
             self.logger.error("Extra event data after parsing: "
                 + "%d byte(s) left, should be 0"  % len(data))
-            return False, data
+            return False
 
         return True
 
