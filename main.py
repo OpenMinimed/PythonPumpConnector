@@ -77,9 +77,6 @@ def initialize_components(pump):
 def unsubscribe_components():
 
     global sgr, socpc, cgmm, certman, hr, hatss
-    
-    # fix for duplicated notifications in case of reload 
-    # see https://github.com/ukBaz/python-bluezero/issues/342
 
     sgr.unsubscribe()
     socpc.unsubscribe()
@@ -103,6 +100,17 @@ def reload_modules():
         'hats'
     ]
 
+    # We have to unsubscribe from the component's characteristic
+    # notifications/indications before reloading. This will clear the
+    # associated callbacks that would otherwise add up with every reload
+    # because bluezero does not check for duplicate callbacks being added.
+    #
+    # Inside the component, call add_characteristic_cb(None) to clear the
+    # callback.
+    #
+    # see https://github.com/ukBaz/python-bluezero/issues/342#issuecomment-894165954
+    #
+    # (That commit has since been merged into the bluezero codebase.)
     logging.info("Unsubscribing components...")
     unsubscribe_components()
         
