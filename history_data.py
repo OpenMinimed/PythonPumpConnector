@@ -103,11 +103,11 @@ class BolusProgrammedP1Data(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.bolus_id: int = None
-        self.bolus_type: int = None
-        self.programmed_bolus_fast_amount: float = None
-        self.programmed_bolus_extended_amount: float = None
-        self.effective_bolus_duration: int = None
+        self.bolus_id: int | None = None
+        self.bolus_type: int | None = None
+        self.programmed_bolus_fast_amount: float | None = None
+        self.programmed_bolus_extended_amount: float | None = None
+        self.effective_bolus_duration: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -146,10 +146,10 @@ class BolusProgrammedP2Data(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.flags: int = None
-        self.bolus_delay_time: int = None
-        self.bolus_template_number: int = None
-        self.bolus_activation_type: int = None
+        self.flags: int | None = None
+        self.bolus_delay_time: int | None = None
+        self.bolus_template_number: int | None = None
+        self.bolus_activation_type: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -191,11 +191,11 @@ class BolusDeliveredP1Data(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.bolus_id: int = None
-        self.bolus_type: int = None
-        self.delivered_bolus_fast_amount: float = None
-        self.delivered_bolus_extended_amount: float = None
-        self.effective_bolus_duration: int = None
+        self.bolus_id: int | None = None
+        self.bolus_type: int | None = None
+        self.delivered_bolus_fast_amount: float | None = None
+        self.delivered_bolus_extended_amount: float | None = None
+        self.effective_bolus_duration: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -233,11 +233,11 @@ class BolusDeliveredP2Data(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.flags: int = None
-        self.bolus_start_time_offset: int = None
-        self.bolus_activation_type: int = None
-        self.bolus_end_reason: int = None
-        self.annunciation_instance_id: int = None
+        self.flags: int | None = None
+        self.bolus_start_time_offset: int | None = None
+        self.bolus_activation_type: int | None = None
+        self.bolus_end_reason: int | None = None
+        self.annunciation_instance_id: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -291,10 +291,10 @@ class DeliveredBasalRateChangedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.flags: int = None
-        self.old_basal_rate: float = None
-        self.new_basal_rate: float = None
-        self.basal_delivery_context: int = None
+        self.flags: int | None = None
+        self.old_basal_rate: float | None = None
+        self.new_basal_rate: float | None = None
+        self.basal_delivery_context: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -330,8 +330,8 @@ class MaxBolusAmountChangedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.old_amount: float = None
-        self.new_amount: float = None
+        self.old_amount: float | None = None
+        self.new_amount: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -354,8 +354,8 @@ class MicroBolusData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.bolus_number: int = None
-        self.bolus_amount: float = None
+        self.bolus_number: int | None = None
+        self.bolus_amount: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -386,7 +386,7 @@ class CL1TransitionData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.transition_state: int = None
+        self.transition_state: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -423,11 +423,11 @@ class TherapyContextData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.flags: int = None
-        self.basal_rate: float = None
-        self.insulin_delivery_stopped_reason: int = None
-        self.tbr_type: int = None
-        self.tbr_adjustment: float = None
+        self.flags: int | None = None
+        self.basal_rate: float | None = None
+        self.insulin_delivery_stopped_reason: int | None = None
+        self.tbr_type: int | None = None
+        self.tbr_adjustment: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -475,7 +475,7 @@ class MealData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.food_amount: float = None
+        self.food_amount: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -496,8 +496,8 @@ class BgReadingData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.time_offset: int = None
-        self.bg_value: float = None
+        self.time_offset: int | None = None
+        self.bg_value: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -522,8 +522,8 @@ class CalibrationData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.time_offset: int = None
-        self.bg_measurement: float = None
+        self.time_offset: int | None = None
+        self.bg_measurement: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -548,7 +548,7 @@ class InsulinDeliveryStoppedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.insulin_delivery_stopped_reason: int = None
+        self.insulin_delivery_stopped_reason: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -580,7 +580,7 @@ class InsulinDeliveryRestartedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.insulin_delivery_restarted_reason: int = None
+        self.insulin_delivery_restarted_reason: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -603,10 +603,10 @@ class SGMeasurementData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.time_offset: int = None
-        self.sg_value: int = None
-        self.isig: int = None
-        self.v_counter: int = None
+        self.time_offset: int | None = None
+        self.sg_value: int | None = None
+        self.isig: int | None = None
+        self.v_counter: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -646,9 +646,9 @@ class CGMAnalyticsData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.time_offset: int = None
-        self.psgv: float = None
-        self.cal_factor: int = None
+        self.time_offset: int | None = None
+        self.psgv: float | None = None
+        self.cal_factor: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -680,8 +680,8 @@ class NGPReferenceTimeData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.recording_reason: int = None
-        self.date_time: datetime = None
+        self.recording_reason: int | None = None
+        self.date_time: dt.datetime | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -706,8 +706,8 @@ class AnnunciationClearedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.fault_id: int = None
-        self.instance_id: int = None
+        self.fault_id: int | None = None
+        self.instance_id: int | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -730,8 +730,8 @@ class MaxAutoBasalRateChangedData(HistoryEventData):
     def __init__(self, data: bytes):
         super().__init__(data)
 
-        self.old_rate: float = None
-        self.new_rate: float = None
+        self.old_rate: float | None = None
+        self.new_rate: float | None = None
 
     def _parse_impl(self, data):
         # mandatory fields
@@ -795,10 +795,10 @@ class HistoryData:
         self.use_e2e = use_e2e
 
         # parsed data
-        self.event_type: HistoryEventType = None
-        self.sequence_number: int = None
-        self.relative_offset: int = None
-        self.event_data: HistoryEventData = None
+        self.event_type: HistoryEventType | None = None
+        self.sequence_number: int | None = None
+        self.relative_offset: int | None = None
+        self.event_data: HistoryEventData | None = None
 
     def parse(self) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
@@ -834,7 +834,7 @@ class HistoryData:
         event_type_int,       data = ParseUtils.consume_u16(data)
         self.sequence_number, data = ParseUtils.consume_u32(data)
         self.relative_offset, data = ParseUtils.consume_u16(data)
-        event_data_raw,       data = data, []
+        event_data_raw,       data = data, bytes([])
 
         try:
             self.event_type = HistoryEventType(event_type_int)
