@@ -20,6 +20,7 @@ from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
 
+import datetime as dt
 import importlib
 import sys
 
@@ -141,11 +142,13 @@ def print_help():
     return
 
 def save_history():
+    filename = dt.datetime.now().strftime("%Y-%m-%d_%H:%M:%S_history_data.txt")
+
     # get history data from pump
     records = hr.get_last_n_records(300)
 
     # write data to file as hexstring
-    with open("history_data.txt", "w") as f:
+    with open(filename, "w") as f:
         for r in records:
             f.write(r.data.hex() + "\n")
 
