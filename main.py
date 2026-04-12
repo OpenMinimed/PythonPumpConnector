@@ -141,11 +141,13 @@ def print_help():
     return
 
 def save_history():
+    # get history data from pump
     records = hr.get_last_n_records(300)
-    with open("history_data.pickle", "w") as f:
+
+    # write data to file as hexstring
+    with open("history_data.txt", "w") as f:
         for r in records:
-            d = pickle.dumps(r)
-            f.write(d.hex() + "\n")
+            f.write(r.data.hex() + "\n")
 
 def setup_actions():
     global actions
