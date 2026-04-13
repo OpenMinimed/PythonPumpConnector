@@ -149,7 +149,7 @@ def print_help():
     return
 
 def save_history():
-    filename = dt.datetime.now().strftime("%Y-%m-%d_%H:%M:%S_history_data.txt")
+    filename = dt.datetime.now().strftime("%Y-%m-%d__%H-%M-%S_history_data.txt")
 
     # get history data from pump
     records = hr.get_last_n_records(DUMP_COUNT)

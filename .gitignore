@@ -3,4 +3,4 @@ __pycache__
 *$py.class
 *.log
 orig.py
-*.pickle
+*_history_data.txt
