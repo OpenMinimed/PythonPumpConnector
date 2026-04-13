@@ -24,6 +24,8 @@ import datetime as dt
 import importlib
 import sys
 
+DUMP_COUNT = 1000
+
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
@@ -36,6 +38,7 @@ cgmm = None
 certman = None
 hr = None
 hatss = None
+devinf = None
 
 # Actions dict
 actions = {}
@@ -50,7 +53,7 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr, hatss
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf
 
     from sg_reader import SGReader
     from socp import SocpController
@@ -58,6 +61,7 @@ def initialize_components(pump):
     from cm import CertificateManagement
     from history_reader import HistoryReader
     from hats import HATS
+    from device_info import DeviceInfo
 
     sgr = SGReader(pump)
     logging.info("sg reader created")
@@ -71,13 +75,14 @@ def initialize_components(pump):
     logging.info("HistoryReader created")
     hatss = HATS(pump)
     logging.info("HATS created")
-
+    devinf = DeviceInfo(pump)
+    logging.info("DeviceInfo created")
     return    
 
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr, hatss
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf
 
     sgr.unsubscribe()
     socpc.unsubscribe()
@@ -85,6 +90,7 @@ def unsubscribe_components():
     certman.unsubscribe()
     hr.unsubscribe()
     hatss.unsubscribe()
+    devinf.unsubscribe()
 
     return
 
@@ -98,7 +104,8 @@ def reload_modules():
         'cgm_misc',
         'cm',
         'history_reader',
-        'hats'
+        'hats',
+        'device_info'
     ]
 
     # We have to unsubscribe from the component's characteristic
@@ -145,7 +152,7 @@ def save_history():
     filename = dt.datetime.now().strftime("%Y-%m-%d_%H:%M:%S_history_data.txt")
 
     # get history data from pump
-    records = hr.get_last_n_records(300)
+    records = hr.get_last_n_records(DUMP_COUNT)
 
     # write data to file as hexstring
     with open(filename, "w") as f:
@@ -173,7 +180,9 @@ def setup_actions():
         '9': ('Read IDD last record', lambda: hr.get_last_record()),
         '10': ('Read IDD first record', lambda: hr.get_first_record()),
         '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
-        '12': ('Save IDD history of 300 records to a file', lambda: save_history()),
+        '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
+
+        '13': ('Read device info', lambda: devinf.get_device_info()),
 
 
     }

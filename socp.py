@@ -10,8 +10,6 @@ from sake_handler import SakeHandler
 from value_converter import ValueConverter
 from uuids import UUID
 
-UUID_SOCP_CHAR        = "00002aac-0000-1000-8000-00805f9b34fb"
-
 class SocpOpCode(IntEnum):
     READ_CURRENT_SESSION_ID = 0x8c,
     READ_CURRENT_SESSION_ID_RESPONSE = 0x8d,
