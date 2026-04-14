@@ -65,11 +65,6 @@ class DatabaseManager:
         missing_in_range = sorted(device_range - db_seqs)
         self.logger.debug(f"Device has {len(device_range)} records, missing {len(missing_in_range)} in DB")
 
-        # Check for sequences in DB that are outside device's range
-        missing_outside = db_seqs - device_range
-        if missing_outside:
-            self.logger.warning(f"Some records in DB are no longer available on device: {sorted(missing_outside)}")
-
         if not missing_in_range:
             self.logger.info("Database is up to date")
             conn.close()
@@ -93,10 +88,15 @@ class DatabaseManager:
         for min_seq, max_seq in ranges:
             self.logger.debug(f"Fetching records from {min_seq} to {max_seq}")
             try:
-                records = self.hr.get_records_between(min_seq, max_seq)
+             
+                query_min = max(0, min_seq - 1)
+                query_max = max_seq + 1
+                records = self.hr.get_records_between(query_min, query_max)
                 all_records.extend(records)
-                self.logger.debug(f"Fetched {len(records)} records for range {min_seq}-{max_seq}")
-                # Check for holes in this batch
+                self.logger.debug(f"Fetched {len(records)} records for range {min_seq}-{max_seq} using query {query_min}-{query_max}")
+             
+                # Check for holes in this batch. The expected range is still the
+                # inclusive set of sequence values we wanted from the DB.
                 fetched_seqs = {r.sequence_number for r in records}
                 expected = set(range(min_seq, max_seq + 1))
                 if fetched_seqs != expected:

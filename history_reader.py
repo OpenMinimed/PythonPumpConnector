@@ -82,17 +82,28 @@ class HistoryReader():
         self.response = None
         self.sh = SakeHandler()
         self.timeout = 3 # default for single reads
+        self.last_message_time = time.time()  # Track last time we received any message
 
         success = self._configure_characteristics()
         assert success == True
         return
     
     def __wait_for_cp_resp(self) -> None:
-        if self.cp_finished.wait(timeout=self.timeout):
-            self.logger.info("control point finished")
-            return
-        self.cp_finished = None
-        raise RuntimeError("Timeout while waiting for control point to finish")
+        """
+        Wait for control point response, continuously checking if we haven't received
+        anything
+        """
+        while True:
+            if self.cp_finished.wait(timeout=self.timeout - 0.1):
+                self.logger.info("control point finished")
+                return
+            
+            # Check if we've exceeded the timeout since last message
+            elapsed = time.time() - self.last_message_time
+            if elapsed >= self.timeout:
+                self.cp_finished = None
+                raise RuntimeError("Timeout while waiting for control point to finish")
+
     
     def __wait_for_data_resp(self) -> None:
         """
@@ -147,18 +158,17 @@ class HistoryReader():
             )
     
     def get_records_between(self, min:int, max:int) -> list[HistoryData]:
-        
-        # for me it goes with around 15 /s 
-        exp_len = max - min
-        timeout_bak = self.timeout
-        self.timeout = ((1 / 15) *  exp_len) * 1.5 # overwrite timeout with a 50% tolerance
-        self.logger.debug(f"setting timeout to {self.timeout}")
-
+        """
+        returns really BETWEEN, meaning min < x < max. this is in contrast with the device which does min <= x <= max, because i am dumb can not wrap my head around it.
+        """
+  
+        exp_len = max - min - 1
         self.cp_finished = threading.Event()
     
         self.logger.debug(f"reading record between {min} and {max}")
-        packed_min = int.to_bytes(min + 1, length=4, byteorder="little") # + 1 to correct for inclusive comparison
-        packed_max = int.to_bytes(max, length=4, byteorder="little")
+        # +/- 1 to correct for inclusive comparison
+        packed_min = int.to_bytes(min + 1, length=4, byteorder="little")
+        packed_max = int.to_bytes(max - 1, length=4, byteorder="little")
         
         req = bytes([IddRacpOpCode.REPORT_RECORDS, IddRacpOperator.WITHIN_RANGE, IddRacpFilterType.SEQUENCE_NUMBER])
         req += packed_min
@@ -171,11 +181,7 @@ class HistoryReader():
 
         self.__check_expected(self.EXPECTED_SUCC)
 
-        self.__wait_for_data_resp()
-
         toret = self.__parse_data()
-
-        self.timeout = timeout_bak # TODO: this needs to be in the finally block of a try catch, else it stays like that during an exception
   
         if len(toret) != exp_len:
             raise RuntimeError(f"invalid count of data received: expected = {exp_len} vs actual: {len(toret)}")
@@ -191,7 +197,10 @@ class HistoryReader():
     def get_last_n_records(self, n:int=10) -> list[HistoryData]:
         last = self.get_last_record()
         wanted = last.sequence_number - n
-        return self.get_records_between(wanted, last.sequence_number)
+        return self.get_records_between(wanted, last.sequence_number + 1)
+    
+    def get_record_by_number(self, n:int):
+        return self.get_records_between(n-1, n+1)
 
     def __parse_data(self) -> list[HistoryData]:
         self.__wait_for_data_resp()
@@ -260,6 +269,7 @@ class HistoryReader():
             value = dbus_tools.dbus_to_python(changed_props["Value"])
             self.logger.debug("RACP indication: " + value.hex())
             self.response = value
+            self.last_message_time = time.time()
             self.cp_finished.set()
 
     def _history_data_cb(self, iface, changed_props, invalidated_props):
@@ -268,4 +278,5 @@ class HistoryReader():
             self.logger.debug("IDD History Data notification: " + value.hex())
             data = self.sh.server.session.server_crypt.decrypt(value)
             self.records.append(data)
+            self.last_message_time = time.time()
             self.data_finished.set()
