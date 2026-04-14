@@ -791,7 +791,7 @@ class HistoryData:
         """
 
         self.logger = LogManager.get_logger(self.__class__.__name__)
-        self.data = data
+        self.raw_data = data
         self.use_e2e = use_e2e
 
         # parsed data
@@ -805,7 +805,7 @@ class HistoryData:
         # 3 bytes for the E2E-Counter and E2E-CRC
         min_length = 11 if self.use_e2e else 8
 
-        data = self.data
+        data = self.raw_data
         length = len(data)
 
         if length < min_length:

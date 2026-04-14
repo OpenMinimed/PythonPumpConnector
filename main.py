@@ -157,7 +157,7 @@ def save_history():
     # write data to file as hexstring
     with open(filename, "w") as f:
         for r in records:
-            f.write(r.data.hex() + "\n")
+            f.write(r.raw_data.hex() + "\n")
 
 def setup_actions():
     global actions
@@ -181,8 +181,9 @@ def setup_actions():
         '10': ('Read IDD first record', lambda: hr.get_first_record()),
         '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
         '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
+        '13': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
 
-        '13': ('Read device info', lambda: devinf.get_device_info()),
+        '14': ('Read device info', lambda: devinf.get_device_info()),
 
 
     }
