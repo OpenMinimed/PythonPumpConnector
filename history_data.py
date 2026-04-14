@@ -1,5 +1,6 @@
 import crc
 import logging
+import datetime as dt
 
 from enum import IntEnum
 
@@ -800,7 +801,9 @@ class HistoryData:
         self.relative_offset: int | None = None
         self.event_data: HistoryEventData | None = None
 
-    def parse(self) -> bool:
+        self.__abs_time: dt.datetime | None = None
+
+    def parse(self, ref_time: dt.datetime | None = None) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
         # 3 bytes for the E2E-Counter and E2E-CRC
         min_length = 11 if self.use_e2e else 8
@@ -836,6 +839,11 @@ class HistoryData:
         self.relative_offset, data = ParseUtils.consume_u16(data)
         event_data_raw,       data = data, bytes([])
 
+        # DEBUG: translate relative time to absolute time if a reference was
+        #        provided
+        if ref_time is not None:
+            self.__abs_time = ref_time + dt.timedelta(seconds=self.relative_offset)
+
         try:
             self.event_type = HistoryEventType(event_type_int)
         except ValueError:
@@ -858,13 +866,16 @@ class HistoryData:
         return True
 
     def __str__(self):
+        t = "" if self.__abs_time is None else f" -> {self.__abs_time}"
+
         event_data = str(self.event_data).splitlines()
         event_data = "\n    ".join(event_data)
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Event Type:      {self.event_type.name} (0x{self.event_type.value:04x})",
             f"Sequence Number: {self.sequence_number}",
-            f"Relative Offset: {self.relative_offset} s",
+            f"Relative Offset: {self.relative_offset} s{t}",
             f"Event Data:      {event_data}",
         ]) + "\n)"
 
@@ -884,10 +895,14 @@ if __name__ == "__main__":
         lines = f.readlines()
 
     parsed = [] # type: list[HistoryData]
+    ref_time = None
+
     for i,s in enumerate(lines):
         data = bytes.fromhex(s.strip())
         history_data = HistoryData(data)
-        if history_data.parse():
+        if history_data.parse(ref_time):
+            if history_data.event_type == HistoryEventType.NGP_REFERENCE_TIME:
+                ref_time = history_data.event_data.date_time
             parsed.append(history_data)
         else:
             print(f"Failed to parse history data record in line {i+1}")
