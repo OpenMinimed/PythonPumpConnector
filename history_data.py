@@ -798,7 +798,7 @@ class HistoryData:
         # parsed data
         self.event_type: HistoryEventType | None = None
         self.sequence_number: int | None = None
-        self.relative_offset: int | None = None
+        self.relative_offset: int | None = None # in seconds
         self.event_data: HistoryEventData | None = None
 
         self.__abs_time: dt.datetime | None = None
