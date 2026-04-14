@@ -880,44 +880,30 @@ class HistoryData:
         ]) + "\n)"
 
 
-# NOTE: MOVED TO 'database_manager.py'
+if __name__ == "__main__":
+    import argparse
 
-# if __name__ == "__main__":
-#     import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input",
+        help="Text file with raw IDD History Data records as hexstrings")
+    args = parser.parse_args()
 
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("input",
-#         help="Text file with raw IDD History Data records as hexstrings")
-#     args = parser.parse_args()
+    LogManager.init(level=logging.DEBUG)
 
-#     LogManager.init(level=logging.DEBUG)
+    lines = []
+    with open(args.input, "r") as f:
+        lines = f.readlines()
 
-#     lines = []
-#     with open(args.input, "r") as f:
-#         lines = f.readlines()
+    ref_time = None
 
-#     parsed = [] # type: list[HistoryData]
-#     ref_time = None
-
-#     for i,s in enumerate(lines):
-#         data = bytes.fromhex(s.strip())
-#         history_data = HistoryData(data)
-#         if history_data.parse(ref_time):
-#             if history_data.event_type == HistoryEventType.NGP_REFERENCE_TIME:
-#                 ref_time = history_data.event_data.date_time
-#             parsed.append(history_data)
-#         else:
-#             print(f"Failed to parse history data record in line {i+1}")
-#             exit(-1)
-
-#     types = []
-#     for record in parsed:
-#         print(record)
-#         if record.event_type.name not in types:
-#             types.append(record.event_type.name)
-
-#     print(f"parsed {len(parsed)} objects from dump file")
-#     print("types in the dump:")
-#     for t in types:
-#         print(f" {t}")
+    for i,s in enumerate(lines):
+        data = bytes.fromhex(s.strip())
+        history_data = HistoryData(data)
+        if history_data.parse(ref_time):
+            if history_data.event_type == HistoryEventType.NGP_REFERENCE_TIME:
+                ref_time = history_data.event_data.date_time
+            print(f"line {i}:", history_data)
+        else:
+            print(f"Failed to parse history data record in line {i+1}")
+            exit(-1)
 
