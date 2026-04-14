@@ -880,42 +880,44 @@ class HistoryData:
         ]) + "\n)"
 
 
-if __name__ == "__main__":
-    import argparse
+# NOTE: MOVED TO 'database_manager.py'
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input",
-        help="Text file with raw IDD History Data records as hexstrings")
-    args = parser.parse_args()
+# if __name__ == "__main__":
+#     import argparse
 
-    LogManager.init(level=logging.DEBUG)
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("input",
+#         help="Text file with raw IDD History Data records as hexstrings")
+#     args = parser.parse_args()
 
-    lines = []
-    with open(args.input, "r") as f:
-        lines = f.readlines()
+#     LogManager.init(level=logging.DEBUG)
 
-    parsed = [] # type: list[HistoryData]
-    ref_time = None
+#     lines = []
+#     with open(args.input, "r") as f:
+#         lines = f.readlines()
 
-    for i,s in enumerate(lines):
-        data = bytes.fromhex(s.strip())
-        history_data = HistoryData(data)
-        if history_data.parse(ref_time):
-            if history_data.event_type == HistoryEventType.NGP_REFERENCE_TIME:
-                ref_time = history_data.event_data.date_time
-            parsed.append(history_data)
-        else:
-            print(f"Failed to parse history data record in line {i+1}")
-            exit(-1)
+#     parsed = [] # type: list[HistoryData]
+#     ref_time = None
 
-    types = []
-    for record in parsed:
-        print(record)
-        if record.event_type.name not in types:
-            types.append(record.event_type.name)
+#     for i,s in enumerate(lines):
+#         data = bytes.fromhex(s.strip())
+#         history_data = HistoryData(data)
+#         if history_data.parse(ref_time):
+#             if history_data.event_type == HistoryEventType.NGP_REFERENCE_TIME:
+#                 ref_time = history_data.event_data.date_time
+#             parsed.append(history_data)
+#         else:
+#             print(f"Failed to parse history data record in line {i+1}")
+#             exit(-1)
 
-    print(f"parsed {len(parsed)} objects from dump file")
-    print("types in the dump:")
-    for t in types:
-        print(f" {t}")
+#     types = []
+#     for record in parsed:
+#         print(record)
+#         if record.event_type.name not in types:
+#             types.append(record.event_type.name)
+
+#     print(f"parsed {len(parsed)} objects from dump file")
+#     print("types in the dump:")
+#     for t in types:
+#         print(f" {t}")
 

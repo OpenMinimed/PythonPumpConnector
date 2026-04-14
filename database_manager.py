@@ -1,15 +1,21 @@
 import sqlite3
 import os
+import logging
+from typing import List, Optional
 
-from history_data import HistoryData
+from utils import add_submodule_to_path
+add_submodule_to_path()
+
+from history_data import HistoryData, HistoryEventType
 from log_manager import LogManager
 from history_reader import HistoryReader
+
 
 class DatabaseManager:
 
     DB_PATH = "history.db"
     
-    def __init__(self, hr:HistoryReader):
+    def __init__(self, hr: Optional[HistoryReader]):
         self.hr = hr
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self._create_db_if_not_exists()
@@ -113,3 +119,60 @@ class DatabaseManager:
         conn.close()
         self.logger.info(f"Synced {stored_count} records")
         return
+
+    def get_all_db_records(self) -> List[HistoryData]:
+        """Retrieve all records from the database."""
+        self.logger.debug("Retrieving all records from DB")
+        conn = sqlite3.connect(self.DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT event_type, seq_number, relative_offset, raw_event_data_hex
+            FROM history_records
+            ORDER BY seq_number
+        ''')
+
+        records = []
+        for row in cursor.fetchall():
+            event_type, seq_number, relative_offset, raw_hex = row
+            raw_data = bytes.fromhex(raw_hex)
+            record = HistoryData(raw_data, use_e2e=False)
+            if record.parse():
+                records.append(record)
+            else:
+                self.logger.error(f"Failed to parse record with seq {seq_number}")
+
+        conn.close()
+        self.logger.debug(f"Retrieved {len(records)} records from DB")
+        return records
+  
+
+if __name__ == "__main__":
+ 
+    LogManager.init(level=logging.DEBUG)
+
+    # Load data from the database
+    db_manager = DatabaseManager(None)
+    parsed = db_manager.get_all_db_records()
+
+    # Find reference time from NGP_REFERENCE_TIME events
+    ref_time = None
+    for record in parsed:
+        if record.event_type == HistoryEventType.NGP_REFERENCE_TIME:
+            ref_time = record.event_data.date_time
+            break
+
+    # Re-parse with reference time if found
+    if ref_time:
+        for record in parsed:
+            record.parse(ref_time)
+
+    types = []
+    for record in parsed:
+        print(record)
+        if record.event_type.name not in types:
+            types.append(record.event_type.name)
+
+    print(f"parsed {len(parsed)} objects from database")
+    print("types in the database:")
+    for t in types:
+        print(f" {t}")
