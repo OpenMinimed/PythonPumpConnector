@@ -123,8 +123,9 @@ class CGMMeasurement:
             #   60 mg/dL over the last 20 minutes, or more than 3 mg/dL per
             #   minute.
             n = min(3, int(abs(self.trend)))
-            arrow = "🠅" if self.trend > 0 else "🠇"
-            trend_arrows = f" ({arrow*n})"
+            if n > 0:
+                arrow = "🠅" if self.trend > 0 else "🠇"
+                trend_arrows = f" ({arrow*n})"
 
         return "\n    ".join([
             f"{self.__class__.__name__}(",
