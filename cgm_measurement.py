@@ -108,6 +108,24 @@ class CGMMeasurement:
         return True
 
     def __str__(self):
+        trend_arrows = ""
+        if self.trend is not None:
+            # 780G's manual gives a relation between rise/fall rates and
+            # arrows displayed:
+            #
+            # - 1 arrow: SG has been rising or falling at a rate of 20-40 mg/dL
+            #   over the last 20 minutes, or 1-2 mg/dL per minute.
+            #
+            # - 2 arrows: SG has been rising or falling at a rate of 40-60 mg/dL
+            #   over the last 20 minutes, or 2-3 mg/dL per minute.
+            #
+            # - 3 arrows: SG has been rising or falling at a rate of more than
+            #   60 mg/dL over the last 20 minutes, or more than 3 mg/dL per
+            #   minute.
+            n = min(3, int(abs(self.trend)))
+            arrow = "🠅" if self.trend > 0 else "🠇"
+            trend_arrows = f" ({arrow*n})"
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Flags:                     {self.flags:08b}",
@@ -117,7 +135,7 @@ class CGMMeasurement:
             f"Cal/Temp:                  {self.cal_temp:08b}",
             f"Warning:                   {self.warning:08b}",
             f"CGM Trend Information:     "
-                + ("--" if self.trend   is None else f"{self.trend} mg/dL/min"),
+                + ("--" if self.trend   is None else f"{self.trend} mg/dL/min{trend_arrows}"),
             f"CGM Quality:               "
                 + ("--" if self.quality is None else f"{self.quality} %"),
         ]) + "\n)"
