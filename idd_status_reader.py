@@ -30,7 +30,7 @@ class IDDStatusReader():
 
         # NOTE: We leave out E2E-Counter and E2E-CRC for now because the 780G
         #       never seems to have that enabled. The flag indicating whether
-        #       to use E2E should be read from th IDD Features characteristic
+        #       to use E2E should be read from the IDD Features characteristic
         #       instead.
         request = int.to_bytes(opcode, length=2, byteorder="little")
         self.logger.debug(f"Sending request: {request.hex()}")
