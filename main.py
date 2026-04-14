@@ -39,6 +39,7 @@ certman = None
 hr = None
 hatss = None
 devinf = None
+iddstatus = None
 
 # Actions dict
 actions = {}
@@ -53,7 +54,7 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus
 
     from sg_reader import SGReader
     from socp import SocpController
@@ -63,6 +64,7 @@ def initialize_components(pump):
     from hats import HATS
     from device_info import DeviceInfo
     from database_manager import DatabaseManager
+    from idd_status_reader import IDDStatusReader
 
     sgr = SGReader(pump)
     logging.info("sg reader created")
@@ -82,6 +84,9 @@ def initialize_components(pump):
     dbm = DatabaseManager(hr)
     logging.info("DatabaseManager created")
 
+    iddstatus = IDDStatusReader(pump)
+    logging.info("IDDStatusReader created")
+
     return    
 
 
@@ -96,6 +101,7 @@ def unsubscribe_components():
     hr.unsubscribe()
     hatss.unsubscribe()
     devinf.unsubscribe()
+    iddstatus.unsubscribe()
 
     return
 
@@ -111,7 +117,8 @@ def reload_modules():
         'history_reader',
         'hats',
         'device_info',
-        'database_manager'
+        'database_manager',
+        'idd_status_reader',
     ]
 
     # We have to unsubscribe from the component's characteristic
@@ -188,8 +195,8 @@ def setup_actions():
         '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
     #    '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
         '12': (f'Sync all data to the database', lambda: dbm.sync()),
-
-        '13': ('Read device info', lambda: devinf.get_device_info()),
+        '13': ('Read Time In Range', lambda: iddstatus.get_time_in_range()),
+        '14': ('Read device info', lambda: devinf.get_device_info()),
 
 
     }
