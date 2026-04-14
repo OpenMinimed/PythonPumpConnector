@@ -49,7 +49,7 @@ class DeviceInfo():
     
     def get_device_info(self) -> str:
         self.read_battery_level()
-        toret = f"Pump {self.model}, SN: {self.serial}, HW:{self.hw}, FW: {self.fw}, BATT: {self.batt} % "
+        toret = f"Pump {self.model}, SN: {self.serial}, HW: {self.hw}, FW: {self.fw}, BATT: {self.batt} % "
         self.logger.debug(toret)
         return toret
 

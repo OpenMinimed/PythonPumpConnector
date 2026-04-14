@@ -6,8 +6,6 @@ from datetime import datetime, timedelta, timezone
 
 from log_manager import LogManager
 
-from utils import add_submodule_to_path
-add_submodule_to_path()
 
 from value_converter import ValueConverter
 from sake_handler import SakeHandler
@@ -154,6 +152,9 @@ class CgmMiscData:
         return
     
 if __name__  == "__main__":
+    from utils import add_submodule_to_path
+    add_submodule_to_path()
+
     test = bytes.fromhex("ea0704040c323680ff")
     t = CgmStartTime(test)
     print(t)

@@ -81,7 +81,7 @@ class HistoryReader():
         self.records: list[bytearray] = []
         self.response = None
         self.sh = SakeHandler()
-        self.timeout = 3 # default for single reads
+        self.timeout = 5
         self.last_message_time = time.time()  # Track last time we received any message
 
         success = self._configure_characteristics()
@@ -94,7 +94,7 @@ class HistoryReader():
         anything
         """
         while True:
-            if self.cp_finished.wait(timeout=self.timeout - 0.1):
+            if self.cp_finished.wait(timeout=self.timeout - 0.5):
                 self.logger.info("control point finished")
                 return
             

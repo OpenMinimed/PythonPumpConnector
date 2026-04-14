@@ -3,9 +3,6 @@ import os
 import logging
 from typing import List, Optional
 
-from utils import add_submodule_to_path
-add_submodule_to_path()
-
 from history_data import HistoryData, HistoryEventType
 from log_manager import LogManager
 from history_reader import HistoryReader
@@ -31,14 +28,17 @@ class DatabaseManager:
                     event_type INTEGER,
                     seq_number INTEGER UNIQUE,
                     relative_offset INTEGER,
-                    raw_event_data_hex TEXT
+                    raw_data TEXT
                 )
             ''')
             conn.commit()
             conn.close()
 
     def sync(self):
-        """Sync the database with the device by fetching missing records."""
+        """
+        Sync the database with the device by fetching missing records.
+        """
+
         self.logger.debug("Starting sync process")
         conn = sqlite3.connect(self.DB_PATH)
         cursor = conn.cursor()
@@ -110,7 +110,7 @@ class DatabaseManager:
         stored_count = 0
         for record in all_records:
             cursor.execute('''
-                INSERT OR IGNORE INTO history_records (event_type, seq_number, relative_offset, raw_event_data_hex)
+                INSERT OR IGNORE INTO history_records (event_type, seq_number, relative_offset, raw_data)
                 VALUES (?, ?, ?, ?)
             ''', (record.event_type.value, record.sequence_number, record.relative_offset, record.raw_data.hex()))
             stored_count += 1
@@ -121,12 +121,15 @@ class DatabaseManager:
         return
 
     def get_all_db_records(self) -> List[HistoryData]:
-        """Retrieve all records from the database."""
+        """
+        Retrieve all records from the database.
+        """
+
         self.logger.debug("Retrieving all records from DB")
         conn = sqlite3.connect(self.DB_PATH)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT event_type, seq_number, relative_offset, raw_event_data_hex
+            SELECT event_type, seq_number, relative_offset, raw_data
             FROM history_records
             ORDER BY seq_number
         ''')
@@ -147,6 +150,9 @@ class DatabaseManager:
   
 
 if __name__ == "__main__":
+
+    from utils import add_submodule_to_path
+    add_submodule_to_path()
  
     LogManager.init(level=logging.DEBUG)
 
