@@ -870,10 +870,17 @@ class HistoryData:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input",
+        help="Text file with raw IDD History Data records as hexstrings")
+    args = parser.parse_args()
+
     LogManager.init(level=logging.DEBUG)
 
     lines = []
-    with open("history_data.txt", "r") as f:
+    with open(args.input, "r") as f:
         lines = f.readlines()
 
     parsed = [] # type: list[HistoryData]
