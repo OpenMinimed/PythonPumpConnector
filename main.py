@@ -259,6 +259,9 @@ def main():
                         default=None)
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
+    parser.add_argument('--no-adv-interval-hack',
+        action='store_true', default=False,
+        help='Do not use the software hack to shorten the advertising interval on reconnects')
     args = parser.parse_args()
 
     # check if bt is even on
@@ -290,7 +293,7 @@ def main():
         mobile_name = "Mobile " + args.advertise_paired
         paired = True
 
-    pa = PumpAdvertiser(mobile_name, paired)
+    pa = PumpAdvertiser(mobile_name, paired, use_adv_interval_hack=not args.no_adv_interval_hack)
     
     def on_connect(dev:Device):
         global device
