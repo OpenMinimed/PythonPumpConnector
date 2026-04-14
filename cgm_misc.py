@@ -89,7 +89,7 @@ class CgmMiscData:
         data = read[:2]
         toret = int.from_bytes(data, byteorder="little")
 
-        self.logger.info(f"final run time = {toret}")
+        self.logger.info(f"final run time = {toret} h")
         return toret
     
     def read_start_time(self) -> datetime:
