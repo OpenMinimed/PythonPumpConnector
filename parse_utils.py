@@ -27,6 +27,12 @@ class ParseUtils():
         return value, data
 
     @staticmethod
+    def consume_i8(data: bytes) -> tuple[int, bytes]:
+        value, data = __class__.consume(data, 1)
+        value = ValueConverter.sign_extend(value, 8)
+        return value, data
+
+    @staticmethod
     def consume_i16(data: bytes) -> tuple[int, bytes]:
         value, data = __class__.consume(data, 2)
         value = ValueConverter.sign_extend(value, 16)

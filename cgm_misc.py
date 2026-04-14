@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from log_manager import LogManager
 
-
+from parse_utils import ParseUtils
 from value_converter import ValueConverter
 from sake_handler import SakeHandler
 from uuids import UUID
@@ -20,37 +20,24 @@ class CgmStartTime():
     dstOffset:int| None = None
     raw:bytes = None
 
-    def __parse_cgm_time(self, raw:bytes) -> datetime:
-        y = int.from_bytes(raw[0:2], byteorder="little")
-        mo = raw[2]
-        d = raw[3]
-        h = raw[4]
-        mi = raw[5]
-        sec = raw[6]
-        return datetime(y, mo, d, h, mi, sec)
-
     def __init__(self, raw:bytes):
         self.raw = raw
 
-        self.ts_raw = self.__parse_cgm_time(self.raw[0:-2]) 
+        # see section 3.45 "CGM Session Start Time" of the GATT Specification
+        # Supplement (GSS), Bluetooth® Document, 2025-12-23
 
-        # 0xff (or signed -128) means that the value is not used and the stamp already contains the offseting (?)
-        # also the offsets are given as a count of 15 minutes interval (???)
-        # source: CgmUtilities.sessionStartTimeAsMillis()
+        self.ts_raw, raw = ParseUtils.consume_datetime(raw)
+        tz,          raw = ParseUtils.consume_i8(raw)
+        dst,         raw = ParseUtils.consume_u8(raw)
 
-        tz = self.raw[-2]
-        tz = ValueConverter.sign_extend(tz)
-        if tz != -128: # 
+        if tz != -128: # time zone offset must no be unknown
             self.timeZoneOffset = tz * 15
 
-        dst = self.raw[-1]
-        if dst != 0xff:
+        if dst != 0xff: # DST offset must not be unknown
             self.dstOffset = dst * 15
 
         self.ts_final = self.__apply_cgm_offsets()
 
-        return
-    
     def __apply_cgm_offsets(self):
 
         total_offset_min = 0
