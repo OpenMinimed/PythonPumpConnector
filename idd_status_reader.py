@@ -10,29 +10,10 @@ from sake_handler import SakeHandler
 from tir_data import TimeInRangeData
 from uuids import UUID
 
-class IddStatusReaderOpCode(IntEnum):
-    RESPONSE_CODE = 771,
-    RESET_STATUS = 780,
-    GET_ACTIVE_BOLUS_IDS = 816,
-    GET_ACTIVE_BOLUS_IDS_RESPONSE = 831,
-    GET_ACTIVE_BOLUS_DELIVERY = 854,
-    GET_ACTIVE_BOLUS_DELIVERY_RESPONSE = 857,
-    GET_ACTIVE_BASAL_RATE_DELIVERY = 869,
-    GET_ACTIVE_BASAL_RATE_DELIVERY_RESPONSE = 874,
-    GET_INSULIN_ON_BOARD = 1011,
-    GET_THERAPY_ALGORITHM_STATES = 1021,
-    GET_THERAPY_ALGORITHM_STATES_RESPONSE = 1022,
-    GET_INSULIN_ON_BOARD_RESPONSE = 1020,
-    GET_DISPLAY_FORMAT = 1023,
-    GET_DISPLAY_FORMAT_RESPONSE = 1024,
-    GET_TIR_DATA = 1025,
-    GET_TIR_DATA_RESPONSE = 1026,
-    GET_SENSOR_WARM_UP_TIME_REMAINING = 1027,
-    GET_SENSOR_WARM_UP_TIME_REMAINING_RESPONSE = 1028,
-    GET_SENSOR_CALIBRATION_STATUS_ICON = 1029,
-    GET_SENSOR_CALIBRATION_STATUS_ICON_RESPONSE = 1030,
-    GET_EARLY_SENSOR_CALIBRATION_TIME = 1031,
-    GET_EARLY_SENSOR_CALIBRATION_TIME_RESPONSE = 1032
+from idd.status.opcodes import IddStatusReaderOpCode
+
+# see IddStatusReaderResponseConverter
+
 
 class IDDStatusReader():
 
@@ -65,6 +46,7 @@ class IDDStatusReader():
         ]
         for f in funcs:
             f()
+            self.logger.debug("-"*20)
 
         return
 
