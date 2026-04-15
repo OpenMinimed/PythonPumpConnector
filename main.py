@@ -195,8 +195,11 @@ def setup_actions():
         '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
     #    '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
         '12': (f'Sync all data to the database', lambda: dbm.sync()),
-        '13': ('Read Time In Range', lambda: iddstatus.get_time_in_range()),
-        '14': ('Read device info', lambda: devinf.get_device_info()),
+        '13': ('Read device info', lambda: devinf.get_device_info()),
+
+        '14': ('IDD status Get Time In Range', lambda: iddstatus.get_time_in_range()),
+        #'15': ('IDD status get insulin on board', lambda: iddstatus.get_insulin_on_board()),
+        '16': ('IDD status test all calls', lambda: iddstatus.test_all()),
 
 
     }

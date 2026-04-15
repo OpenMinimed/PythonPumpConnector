@@ -49,11 +49,102 @@ class IDDStatusReader():
         success = self._configure_characteristics()
         assert success == True
         return
+    
+    def test_all(self):
+        funcs = [
+            self.get_active_bolus_ids,
+            self.get_time_in_range,
+            # self.get_active_bolus_delivery, i get ATT error for this, probably it needs some argument
+            self.get_active_basal_rate_delivery,
+            self.get_insulin_on_board,
+            self.get_therapy_algorithm_states,
+            self.get_display_format,
+            self.get_sensor_warm_up_time_remaining,
+            self.get_sensor_calibration_status_icon,
+            self.get_early_sensor_calibration_time,
+        ]
+        for f in funcs:
+            f()
+
+        return
 
     def get_time_in_range(self):
         self.logger.info("Requesting Time In Range Data")
-        opcode = IddStatusReaderOpCode.GET_TIR_DATA
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_TIR_DATA)
+        if data is None:
+            return None
 
+        tir_data = TimeInRangeData(data)
+        if tir_data.parse():
+            self.logger.debug(tir_data)
+        else:
+            self.logger.error("Failed to parse Time In Range data")
+            return None
+
+        return tir_data
+
+    def get_active_bolus_ids(self):
+        self.logger.info("Requesting Active Bolus IDs")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_ACTIVE_BOLUS_IDS)
+        return data
+
+    def get_active_bolus_delivery(self):
+        self.logger.info("Requesting Active Bolus Delivery")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_ACTIVE_BOLUS_DELIVERY)
+        return data
+
+    def get_active_basal_rate_delivery(self):
+        self.logger.info("Requesting Active Basal Rate Delivery")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_ACTIVE_BASAL_RATE_DELIVERY)
+        return data
+
+    def get_insulin_on_board(self):
+        self.logger.info("Requesting Insulin On Board")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_INSULIN_ON_BOARD)
+        return data
+
+    def get_therapy_algorithm_states(self):
+        self.logger.info("Requesting Therapy Algorithm States")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_THERAPY_ALGORITHM_STATES)
+        return data
+
+    def get_display_format(self):
+        self.logger.info("Requesting Display Format")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_DISPLAY_FORMAT)
+        return data
+
+    def get_sensor_warm_up_time_remaining(self):
+        self.logger.info("Requesting Sensor Warm Up Time Remaining")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_SENSOR_WARM_UP_TIME_REMAINING)
+        return data
+
+    def get_sensor_calibration_status_icon(self):
+        self.logger.info("Requesting Sensor Calibration Status Icon")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_SENSOR_CALIBRATION_STATUS_ICON)
+        return data
+
+    def get_early_sensor_calibration_time(self):
+        self.logger.info("Requesting Early Sensor Calibration Time")
+        data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_EARLY_SENSOR_CALIBRATION_TIME)
+        return data
+
+    def unsubscribe(self):
+        self.idd_srcp.add_characteristic_cb(None)
+        return
+
+    def _send_and_receive_opcode(self, opcode: IddStatusReaderOpCode):
+        """
+        Send an opcode request and wait for the response.
+        
+        Args:
+            opcode: The opcode to send
+            
+        Returns:
+            The decrypted response bytes, or None if an error occurred
+        """
+        # Clear the event before sending so we wait for the NEW response, not a stale one
+        self.operation_finished.clear()
+        
         # NOTE: We leave out E2E-Counter and E2E-CRC for now because the 780G
         #       never seems to have that enabled. The flag indicating whether
         #       to use E2E should be read from the IDD Features characteristic
@@ -73,20 +164,9 @@ class IDDStatusReader():
             return None
 
         # decrypt the response
-        data = self.sh.server.session.server_crypt.decrypt(bytes(self.response))
-
-        tir_data = TimeInRangeData(data)
-        if tir_data.parse():
-            self.logger.debug(tir_data)
-        else:
-            self.logger.error("Failed to parse Time In Range data")
-            return None
-
-        return tir_data
-
-    def unsubscribe(self):
-        self.idd_srcp.add_characteristic_cb(None)
-        return
+        data = self.sh.server.session.server_crypt.decrypt(self.response)
+        self.response = None
+        return data
 
     def _configure_characteristics(self):
         try:
@@ -112,6 +192,6 @@ class IDDStatusReader():
         if "Value" in changed_props:
             value = dbus_tools.dbus_to_python(changed_props["Value"])
             self.logger.debug("SRCP indication: " + value.hex())
-            self.response = value
+            self.response = bytes(value)
             self.operation_finished.set()
         return
