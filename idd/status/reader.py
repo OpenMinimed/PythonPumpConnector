@@ -6,12 +6,12 @@ import time
 
 from log_manager import LogManager
 from sake_handler import SakeHandler
-from tir_data import TimeInRangeData
 from uuids import UUID
 
 from idd.status.opcodes import IddStatusReaderOpCode
 from idd.status.iob import InsulinOnBoardData
 from idd.status.tas import TherapyAlgorithmStatesData
+from idd.status.tir import TimeInRangeData
 
 # see IddStatusReaderResponseConverter
 

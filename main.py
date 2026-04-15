@@ -64,7 +64,7 @@ def initialize_components(pump):
     from hats import HATS
     from device_info import DeviceInfo
     from database_manager import DatabaseManager
-    from idd_status_reader import IDDStatusReader
+    from idd.status.reader import IDDStatusReader
 
     sgr = SGReader(pump)
     logging.info("sg reader created")
@@ -80,12 +80,12 @@ def initialize_components(pump):
     logging.info("HATS created")
     devinf = DeviceInfo(pump)
     logging.info("DeviceInfo created")
-
-    dbm = DatabaseManager(hr)
-    logging.info("DatabaseManager created")
-
     iddstatus = IDDStatusReader(pump)
     logging.info("IDDStatusReader created")
+
+    # special one that uses 'hr' instead of 'pump'
+    dbm = DatabaseManager(hr)
+    logging.info("DatabaseManager created")
 
     return    
 
