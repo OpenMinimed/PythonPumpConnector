@@ -4,9 +4,12 @@ from log_manager import LogManager
 from parse_utils import ParseUtils
 from value_converter import ValueConverter
 
+from idd.status.iob_flags import InsulinOnBoardResponseFlags
+from idd.status.opcodes import IddStatusReaderOpCode
 
 class InsulinOnBoardData:
-    """Insulin On Board Data (IOB)
+    """
+    Insulin On Board Data (IOB)
 
     """
 
@@ -61,7 +64,7 @@ class InsulinOnBoardData:
         self.flags,            data = ParseUtils.consume_u8(data)
         self.insulin_on_board, data = ParseUtils.consume_f32(data)
 
-        expected_opcode = 0x03fc  # Get Insulin On Board Response
+        expected_opcode = IddStatusReaderOpCode.GET_INSULIN_ON_BOARD_RESPONSE
         if opcode != expected_opcode:
             self.logger.error("Wrong response opcode: 0x%04x, wanted 0x%04x"
                 % (opcode, expected_opcode))
@@ -69,13 +72,13 @@ class InsulinOnBoardData:
 
         # Remaining Duration (optional)
         self.remaining_duration = None
-        if self.flags & 0x01:  # Remaining Duration Present
+        if self.flags & InsulinOnBoardResponseFlags.REMAINING_DURATION_PRESENT: 
             self.remaining_duration, data = ParseUtils.consume_u16(data)
 
         # IOB Partial Status (optional)
         self.iob_partial_status_duration = None
         self.iob_partial_status_remaining = None
-        if self.flags & 0x02:  # IOB Partial Status Present
+        if self.flags & InsulinOnBoardResponseFlags.IOB_PARTIAL_STATUS_PRESENT:
             self.iob_partial_status_duration,  data = ParseUtils.consume_u16(data)
             self.iob_partial_status_remaining, data = ParseUtils.consume_u16(data)
 

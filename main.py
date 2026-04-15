@@ -189,17 +189,19 @@ def setup_actions():
         '6': ('Send certificate mgmt request', lambda: certman.send_request()),
         '7': ('Send HATS request', lambda: hatss.send_request()),
 
-        '8': ('Read IDD record count', lambda: hr.get_available_record_count()),
-        '9': ('Read IDD last record', lambda: hr.get_last_record()),
-        '10': ('Read IDD first record', lambda: hr.get_first_record()),
-        '11': ('Read IDD last 10 records', lambda: hr.get_last_n_records()),
+        '8': ('Read IDD History - record count', lambda: hr.get_available_record_count()),
+        '9': ('Read IDD History - last record', lambda: hr.get_last_record()),
+        '10': ('Read IDD History - first record', lambda: hr.get_first_record()),
+        '11': ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
     #    '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
         '12': (f'Sync all data to the database', lambda: dbm.sync()),
         '13': ('Read device info', lambda: devinf.get_device_info()),
 
-        '14': ('IDD status Get Time In Range', lambda: iddstatus.get_time_in_range()),
-        #'15': ('IDD status get insulin on board', lambda: iddstatus.get_insulin_on_board()),
-        '16': ('IDD status test all calls', lambda: iddstatus.test_all()),
+        '14': ('Read IDD status - Get Time In Range', lambda: iddstatus.get_time_in_range()),
+        '15': ('Read IDD status - Get Insulin On Board', lambda: iddstatus.get_insulin_on_board()),
+        '16': ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
+
+        '17': ('IDD status test all calls', lambda: iddstatus.test_all()),
 
 
     }

@@ -3,7 +3,6 @@ from bluezero.central import Central
 
 import threading
 import time
-from enum import IntEnum
 
 from log_manager import LogManager
 from sake_handler import SakeHandler
@@ -11,9 +10,10 @@ from tir_data import TimeInRangeData
 from uuids import UUID
 
 from idd.status.opcodes import IddStatusReaderOpCode
+from idd.status.iob import InsulinOnBoardData
+from idd.status.tas import TherapyAlgorithmStatesData
 
 # see IddStatusReaderResponseConverter
-
 
 class IDDStatusReader():
 
@@ -80,15 +80,23 @@ class IDDStatusReader():
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_ACTIVE_BASAL_RATE_DELIVERY)
         return data
 
-    def get_insulin_on_board(self):
+    def get_insulin_on_board(self) -> InsulinOnBoardData | None:
         self.logger.info("Requesting Insulin On Board")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_INSULIN_ON_BOARD)
-        return data
+        obj = InsulinOnBoardData(data)
+        if obj.parse():
+            self.logger.debug(obj)
+            return obj
+        return None
 
-    def get_therapy_algorithm_states(self):
+    def get_therapy_algorithm_states(self) -> TherapyAlgorithmStatesData | None:
         self.logger.info("Requesting Therapy Algorithm States")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_THERAPY_ALGORITHM_STATES)
-        return data
+        obj = TherapyAlgorithmStatesData(data)
+        if obj.parse():
+            self.logger.debug(obj)
+            return obj
+        return None
 
     def get_display_format(self):
         self.logger.info("Requesting Display Format")

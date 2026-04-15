@@ -2,8 +2,8 @@ from enum import IntEnum
 
 class TherapyAlgorithmStatesFlags(IntEnum):
     AUTO_MODE = 1,
-    LGS_OPTION = 2,
-    PLGM_OPTION = 4,
+    LGS_OPTION = 2, # Low Glucose Suspend
+    PLGM_OPTION = 4, # Predictive Low Glucose Management
     TEMP_TARGET = 8,
     WAIT_TO_CALIBRATE = 16,
     SAFE_BASAL = 32,

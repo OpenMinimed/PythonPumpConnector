@@ -8,7 +8,7 @@ from idd.status.tas_flags import *
 from idd.status.opcodes import IddStatusReaderOpCode
 
 
-class TherapyAlgorithmStates:
+class TherapyAlgorithmStatesData:
 
 
     def __init__(self, data: bytes, use_e2e: bool = False):
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     LogManager.init(level=logging.DEBUG)
 
     raw = bytes.fromhex("fe0301000200")
-    data = TherapyAlgorithmStates(raw)
+    data = TherapyAlgorithmStatesData(raw)
     if data.parse():
         print(data)
     else:
