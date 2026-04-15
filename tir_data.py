@@ -5,8 +5,9 @@ from parse_utils import ParseUtils
 from value_converter import ValueConverter
 
 
-class TimeInRangeData:
-    """Time In Range Data (TIR)
+class TimeInRangeData():
+    """
+    Time In Range Data (TIR)
 
     This record contains statistics about the SG values, specifically the
     fraction of time the value was within or ouside the defined target range.
@@ -39,7 +40,7 @@ class TimeInRangeData:
 
         if length != expected_length:
             self.logger.error("Unexpected length: wanted %d bytes, got %d"
-                % (min_length, length))
+                % (expected_length, length))
             return False
 
         # validate E2E-CRC
