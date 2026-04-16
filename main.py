@@ -92,7 +92,7 @@ def initialize_components(pump):
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus
 
     sgr.unsubscribe()
     socpc.unsubscribe()
