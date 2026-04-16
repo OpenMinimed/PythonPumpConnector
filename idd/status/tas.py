@@ -26,21 +26,21 @@ class TherapyAlgorithmStatesData:
         self.temp_target_duration: int | None = None
         self.wait_to_calibrate_duration: int | None = None
         self.safe_basal_duration: int | None = None
-     
+
         return
 
     def parse(self) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
         # 3 bytes for the E2E-Counter and E2E-CRC
-        min_length = 18 if self.use_e2e else 3
+        min_length = 7 if self.use_e2e else 4
 
         data = self.data
         length = len(data)
 
-        # if length < min_length:
-        #     self.logger.error("Packet too short: wanted at least %d bytes, got %d"
-        #         % (min_length, length))
-        #     return False
+        if length < min_length:
+            self.logger.error("Packet too short: wanted at least %d bytes, got %d"
+                % (min_length, length))
+            return False
 
         #validate E2E-CRC
         
