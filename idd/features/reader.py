@@ -52,7 +52,7 @@ class IDDFeaturesReader():
 
     def _configure_characteristics(self):
         try:
-            # IDD service,  characteristic
+            # IDD service, IDD Features characteristic
             self.logger.info("Adding characteristic IDD Features")
             chrc = self.central.add_characteristic(
                 UUID.IDD_SERVICE, UUID.IDD_FEATURES_CHAR)
