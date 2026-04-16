@@ -110,7 +110,6 @@ class PumpFeatures:
             f"{self.__class__.__name__}(",
             f"Insulin Concentration: "
                 + ("--" if self.insulin_concentration is None else f"{self.insulin_concentration} IU/mL"),
-            # TODO: print named flags
             f"Flags:                 "
                 + ("--" if self.flags is None else f"\n{' '*8}".join(flags)),
         ]) + "\n)"
