@@ -174,38 +174,41 @@ def save_history():
 
 def setup_actions():
     global actions
-    
+
+    numbered_actions = [
+        ('Read sensor glucose value', lambda: sgr.get_value()),
+        ('Read sensor details',       lambda: socpc.read_sensor_details()),
+
+        ('Read CGM run time',       lambda: cgmm.read_run_time()),
+        ('Read CGM start time',     lambda: cgmm.read_start_time()),
+        ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
+
+        ('Send certificate mgmt request', lambda: certman.send_request()),
+        ('Send HATS request',             lambda: hatss.send_request()),
+
+        ('Read IDD History - record count',    lambda: hr.get_available_record_count()),
+        ('Read IDD History - last record',     lambda: hr.get_last_record()),
+        ('Read IDD History - first record',    lambda: hr.get_first_record()),
+        ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
+        #(f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
+        (f'Sync all data to the database', lambda: dbm.sync()),
+        ('Read device info', lambda: devinf.get_device_info()),
+
+        ('Read IDD status - Get Time In Range',       lambda: iddstatus.get_time_in_range()),
+        ('Read IDD status - Get Insulin On Board',    lambda: iddstatus.get_insulin_on_board()),
+        ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
+        ('Read IDD status - Pump Status',             lambda: iddstatus.get_pump_status()),
+
+        ('IDD status test all calls', lambda: iddstatus.test_all()),
+    ]
+
     actions = {
         'h': ('Show help/commands', lambda: print_help()),
         'r': ('Reload all modules', lambda: reload_modules()),
-
-        '1': ('Read sensor glucose value', lambda: sgr.get_value()),
-        '2': ('Read sensor details', lambda: socpc.read_sensor_details()),
-
-        '3': ('Read CGM run time', lambda: cgmm.read_run_time()),
-        '4': ('Read CGM start time', lambda: cgmm.read_start_time()),
-        '5': ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
-
-        '6': ('Send certificate mgmt request', lambda: certman.send_request()),
-        '7': ('Send HATS request', lambda: hatss.send_request()),
-
-        '8': ('Read IDD History - record count', lambda: hr.get_available_record_count()),
-        '9': ('Read IDD History - last record', lambda: hr.get_last_record()),
-        '10': ('Read IDD History - first record', lambda: hr.get_first_record()),
-        '11': ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
-    #    '12': (f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
-        '12': (f'Sync all data to the database', lambda: dbm.sync()),
-        '13': ('Read device info', lambda: devinf.get_device_info()),
-
-        '14': ('Read IDD status - Get Time In Range', lambda: iddstatus.get_time_in_range()),
-        '15': ('Read IDD status - Get Insulin On Board', lambda: iddstatus.get_insulin_on_board()),
-        '16': ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
-        '17': ('Read IDD status - Pump Status', lambda: iddstatus.get_pump_status()),
-
-        '18': ('IDD status test all calls', lambda: iddstatus.test_all()),
-
-
     }
+
+    for i,act in enumerate(numbered_actions):
+        actions[str(i + 1)] = act
 
 def main_input_loop():
 
