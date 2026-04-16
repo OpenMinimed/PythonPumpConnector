@@ -124,11 +124,6 @@ class IDDStatusReader():
     def get_pump_status(self):
         self.logger.info("Reading IDD Status")
 
-        # NOTE: We leave out E2E-Counter and E2E-CRC for now because the 780G
-        #       never seems to have that enabled. The flag indicating whether
-        #       to use E2E should be read from the IDD Features characteristic
-        #       instead.
-
         raw = self.idd_status.read_raw_value()
         value = dbus_tools.dbus_to_python(raw)
         self.logger.debug("IDD Status: " + value.hex())
