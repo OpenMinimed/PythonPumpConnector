@@ -67,9 +67,14 @@ class PumpStatus:
         self.therapy_control_state: TherapyControlState | None = None
         self.operational_state: OperationalState | None = None
         self.reservoir_remaining_amount: float | None = None
-        self.flags: int | None = None
-        self.sensor_connectivity_state: int | None = None
+        self.flags: list[IDDStatusFlag] | None = None
+        self.sensor_connectivity_state: list[SensorConnectivityState] | None = None
         self.sensor_message_state: SensorMessageState | None = None
+
+    def is_reservoir_attached(self) -> None | bool:
+        if self.flags is None:
+            return None
+        return IDDStatusFlag.RESERVOIR_ATTACHED in self.flags
 
     def parse(self) -> bool:
         expected_length = 9
@@ -103,8 +108,13 @@ class PumpStatus:
         self.therapy_control_state,      data = ParseUtils.consume_u8(data)
         self.operational_state,          data = ParseUtils.consume_u8(data)
         self.reservoir_remaining_amount, data = ParseUtils.consume_f32(data)
-        self.flags,                      data = ParseUtils.consume_u8(data)
-        self.sensor_connectivity_state,  data = ParseUtils.consume_u8(data)
+
+        x,                               data = ParseUtils.consume_u8(data)
+        self.flags                            = ParseUtils.parse_flags(x, IDDStatusFlag)
+        
+        y,                               data = ParseUtils.consume_u8(data)
+        self.sensor_connectivity_state        = ParseUtils.parse_flags(y, SensorConnectivityState)
+
         self.sensor_message_state,       data = ParseUtils.consume_u8(data)
 
         assert TherapyControlState.contains_value(self.therapy_control_state)
@@ -132,13 +142,11 @@ class PumpStatus:
             f"Operational State:          "
                 + ("--" if self.operational_state is None else self.operational_state.name),
             f"Reservoir Remaining Amount: "
-                + ("--" if self.reservoir_remaining_amount is None else f"{self.reservoir_remaining_amount} mg/dL"),
-            # TODO: print named flags
+                + ("--" if self.reservoir_remaining_amount is None else f"{self.reservoir_remaining_amount} Unit"),
             f"Flags:                      "
-                + ("--" if self.flags is None else f"{self.flags:09_b}".replace("0", ".").replace("_", " ")),
-            # TODO: print named flags
+                + ("--" if self.flags is None else f"{self.flags}"),
             f"Sensor Connectivity State:  "
-                + ("--" if self.sensor_connectivity_state is None else f"{self.sensor_connectivity_state:09_b}".replace("0", ".").replace("_", " ")),
+                + ("--" if self.sensor_connectivity_state is None else f"{self.sensor_connectivity_state}"),
             f"Sensor Message State:       "
                 + ("--" if self.sensor_message_state is None else self.sensor_message_state.name),
         ]) + "\n)"

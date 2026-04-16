@@ -1,7 +1,6 @@
 from datetime import datetime
-
+from enum import IntEnum
 from value_converter import ValueConverter
-
 
 class ParseUtils():
     
@@ -58,3 +57,7 @@ class ParseUtils():
         value = ValueConverter.decode_datetime(data[0:n])
         return value, data[n:]
 
+
+    @staticmethod
+    def parse_flags(raw: int, enum_type: type[IntEnum]) -> list[IntEnum]:
+        return [flag for flag in enum_type if raw & flag]
