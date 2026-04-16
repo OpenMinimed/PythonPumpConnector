@@ -100,32 +100,28 @@ class TherapyAlgorithmStatesData:
         return True
 
     def __str__(self) -> str:
-        parts = [
-            f"{self.__class__.__name__} Flags: {self.flags:#06x}" if self.flags is not None else "Flags: None",
-        ]
-        
-        if self.auto_mode_shield_state is not None:
-            parts.append(f"Auto Mode Shield State: {self.auto_mode_shield_state.name}")
-        
-        if self.auto_mode_readiness_state is not None:
-            parts.append(f"Auto Mode Readiness State: {self.auto_mode_readiness_state.name}")
-        
-        if self.plgm_state is not None:
-            parts.append(f"PLGM State: {self.plgm_state.name}")
-        
-        if self.lgs_state is not None:
-            parts.append(f"LGS State: {self.lgs_state.name}")
-        
-        if self.temp_target_duration is not None:
-            parts.append(f"Temp Target Duration: {self.temp_target_duration}")
-        
-        if self.wait_to_calibrate_duration is not None:
-            parts.append(f"Wait to Calibrate Duration: {self.wait_to_calibrate_duration}")
-        
-        if self.safe_basal_duration is not None:
-            parts.append(f"Safe Basal Duration: {self.safe_basal_duration}")
-        
-        return "\n  ".join(parts)
+        return "\n    ".join([
+            f"{self.__class__.__name__}(",
+            f"Flags:                      "
+                + ("--" if self.flags is None else f"{self.flags:019_b}".replace("0", ".").replace("_", " ")),
+            f"Auto Mode Shield State:     "
+                + ("--" if self.auto_mode_shield_state is None else self.auto_mode_shield_state.name),
+            f"Auto Mode Readiness State:  "
+                + ("--" if self.auto_mode_readiness_state is None else self.auto_mode_readiness_state.name),
+            f"PLGM State:                 "
+                + ("--" if self.plgm_state is None else self.plgm_state.name),
+            f"LGS State:                  "
+                + ("--" if self.lgs_state is None else self.lgs_state.name),
+            # TODO: add proper unit
+            f"Temp Target Duration:       "
+                + ("--" if self.temp_target_duration is None else f"{self.temp_target_duration}"),
+            # TODO: add proper unit
+            f"Wait to Calibrate Duration: "
+                + ("--" if self.wait_to_calibrate_duration is None else f"{self.wait_to_calibrate_duration}"),
+            # TODO: add proper unit
+            f"Safe Basal Duration:        "
+                + ("--" if self.safe_basal_duration is None else f"{self.safe_basal_duration}"),
+        ]) + "\n)"
 
 
 if __name__ == "__main__":
