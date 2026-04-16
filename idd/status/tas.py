@@ -42,10 +42,10 @@ class TherapyAlgorithmStatesData:
                 % (min_length, length))
             return False
 
-        #validate E2E-CRC
-        
-        #TODO: Actually test this! This was not yet tested since the pump
-        #      never uses E2E-Protection in this service.
+        # validate E2E-CRC
+        #
+        # TODO: Actually test this! This was not yet tested since the pump
+        #       never uses E2E-Protection in this service.
         if self.use_e2e:
             if not ValueConverter.check_crc(data):
                 self.logger.error("E2E-CRC mismatch")
@@ -58,14 +58,15 @@ class TherapyAlgorithmStatesData:
             # included in the CRC)
             data = data[:-1]
 
-        opcode, data = ParseUtils.consume_u16(data)
-
-        if opcode != IddStatusReaderOpCode.GET_THERAPY_ALGORITHM_STATES_RESPONSE:
-            self.logger.error(f"invalid opcode, expected {hex(IddStatusReaderOpCode.GET_THERAPY_ALGORITHM_STATES_RESPONSE)}, got {hex(opcode)}")
-            return False
-
+        # mandatory fields
+        opcode,     data = ParseUtils.consume_u16(data)
         self.flags, data = ParseUtils.consume_u16(data)
-        self.logger.debug(f"{hex(self.flags) = }, {hex(opcode) = }")
+
+        expected_opcode = IddStatusReaderOpCode.GET_THERAPY_ALGORITHM_STATES_RESPONSE
+        if opcode != expected_opcode:
+            self.logger.error("Wrong response opcode: 0x%04x, wanted 0x%04x"
+                % (opcode, expected_opcode))
+            return False
 
         if self.flags & TherapyAlgorithmStatesFlags.AUTO_MODE:
             x, data = ParseUtils.consume_u8(data)
@@ -83,13 +84,13 @@ class TherapyAlgorithmStatesData:
             self.lgs_state = PlgmOrLgsState(x)
 
         if self.flags & TherapyAlgorithmStatesFlags.TEMP_TARGET:
-            self.temp_target_duration, data = ParseUtils.consume_u16()
+            self.temp_target_duration, data = ParseUtils.consume_u16(data)
 
         if self.flags & TherapyAlgorithmStatesFlags.WAIT_TO_CALIBRATE:
-            self.wait_to_calibrate_duration, data = ParseUtils.consume_u16()
+            self.wait_to_calibrate_duration, data = ParseUtils.consume_u16(data)
 
         if self.flags & TherapyAlgorithmStatesFlags.SAFE_BASAL:
-            self.safe_basal_duration, data = ParseUtils.consume_u8()
+            self.safe_basal_duration, data = ParseUtils.consume_u16(data)
 
         # we are done, there must not be any data left
         if len(data) > 0:
