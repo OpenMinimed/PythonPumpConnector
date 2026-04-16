@@ -118,7 +118,7 @@ def reload_modules():
         'hats',
         'device_info',
         'database_manager',
-        'idd_status_reader',
+        'idd.status.reader',
     ]
 
     # We have to unsubscribe from the component's characteristic
