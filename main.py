@@ -40,6 +40,7 @@ hr = None
 hatss = None
 devinf = None
 iddstatus = None
+iddfeatures = None
 
 # Actions dict
 actions = {}
@@ -54,7 +55,7 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures
 
     from sg_reader import SGReader
     from socp import SocpController
@@ -65,6 +66,7 @@ def initialize_components(pump):
     from device_info import DeviceInfo
     from database_manager import DatabaseManager
     from idd.status.reader import IDDStatusReader
+    from idd.features.reader import IDDFeaturesReader
 
     sgr = SGReader(pump)
     logging.info("sg reader created")
@@ -82,6 +84,8 @@ def initialize_components(pump):
     logging.info("DeviceInfo created")
     iddstatus = IDDStatusReader(pump)
     logging.info("IDDStatusReader created")
+    iddfeatures = IDDFeaturesReader(pump)
+    logging.info("IDDFeaturesReader created")
 
     # special one that uses 'hr' instead of 'pump'
     dbm = DatabaseManager(hr)
@@ -92,7 +96,7 @@ def initialize_components(pump):
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus, iddfeatures
 
     sgr.unsubscribe()
     socpc.unsubscribe()
@@ -102,6 +106,7 @@ def unsubscribe_components():
     hatss.unsubscribe()
     devinf.unsubscribe()
     iddstatus.unsubscribe()
+    iddfeatures.unsubscribe()
 
     return
 
@@ -119,6 +124,7 @@ def reload_modules():
         'device_info',
         'database_manager',
         'idd.status.reader',
+        'idd.features.reader',
     ]
 
     # We have to unsubscribe from the component's characteristic
@@ -193,6 +199,8 @@ def setup_actions():
         #(f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
         (f'Sync all data to the database', lambda: dbm.sync()),
         ('Read device info', lambda: devinf.get_device_info()),
+
+        ('Read pump features', lambda: iddfeatures.get_pump_features()),
 
         ('Read IDD status - Get Time In Range',       lambda: iddstatus.get_time_in_range()),
         ('Read IDD status - Get Insulin On Board',    lambda: iddstatus.get_insulin_on_board()),
