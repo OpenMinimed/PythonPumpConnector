@@ -135,6 +135,9 @@ class PumpStatus:
         return True
 
     def __str__(self):
+        def flag_list(flags):
+            return ", ".join([f.name for f in flags])
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Therapy Control State:      "
@@ -144,9 +147,9 @@ class PumpStatus:
             f"Reservoir Remaining Amount: "
                 + ("--" if self.reservoir_remaining_amount is None else f"{self.reservoir_remaining_amount} IU"),
             f"Flags:                      "
-                + ("--" if self.flags is None else f"{self.flags}"),
+                + ("--" if self.flags is None else f"{flag_list(self.flags)}"),
             f"Sensor Connectivity State:  "
-                + ("--" if self.sensor_connectivity_state is None else f"{self.sensor_connectivity_state}"),
+                + ("--" if self.sensor_connectivity_state is None else f"{flag_list(self.sensor_connectivity_state)}"),
             f"Sensor Message State:       "
                 + ("--" if self.sensor_message_state is None else self.sensor_message_state.name),
         ]) + "\n)"
