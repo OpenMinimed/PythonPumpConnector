@@ -142,7 +142,7 @@ class PumpStatus:
             f"Operational State:          "
                 + ("--" if self.operational_state is None else self.operational_state.name),
             f"Reservoir Remaining Amount: "
-                + ("--" if self.reservoir_remaining_amount is None else f"{self.reservoir_remaining_amount} Unit"),
+                + ("--" if self.reservoir_remaining_amount is None else f"{self.reservoir_remaining_amount} IU"),
             f"Flags:                      "
                 + ("--" if self.flags is None else f"{self.flags}"),
             f"Sensor Connectivity State:  "
