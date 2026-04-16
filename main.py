@@ -200,8 +200,9 @@ def setup_actions():
         '14': ('Read IDD status - Get Time In Range', lambda: iddstatus.get_time_in_range()),
         '15': ('Read IDD status - Get Insulin On Board', lambda: iddstatus.get_insulin_on_board()),
         '16': ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
+        '17': ('Read IDD status - Pump Status', lambda: iddstatus.get_pump_status()),
 
-        '17': ('IDD status test all calls', lambda: iddstatus.test_all()),
+        '18': ('IDD status test all calls', lambda: iddstatus.test_all()),
 
 
     }

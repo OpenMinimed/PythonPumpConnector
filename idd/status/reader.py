@@ -10,6 +10,7 @@ from uuids import UUID
 
 from idd.status.opcodes import IddStatusReaderOpCode
 from idd.status.iob import InsulinOnBoardData
+from idd.status.pump_status import PumpStatus
 from idd.status.tas import TherapyAlgorithmStatesData
 from idd.status.tir import TimeInRangeData
 
@@ -22,6 +23,7 @@ class IDDStatusReader():
         self.central = central
 
         self.idd_srcp = None
+        self.idd_status = None
 
         self.sh = SakeHandler()
         self.operation_finished = threading.Event()
@@ -43,6 +45,7 @@ class IDDStatusReader():
             self.get_sensor_warm_up_time_remaining,
             self.get_sensor_calibration_status_icon,
             self.get_early_sensor_calibration_time,
+            self.get_pump_status,
         ]
         for f in funcs:
             f()
@@ -118,6 +121,30 @@ class IDDStatusReader():
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_EARLY_SENSOR_CALIBRATION_TIME)
         return data
 
+    def get_pump_status(self):
+        self.logger.info("Reading IDD Status")
+
+        # NOTE: We leave out E2E-Counter and E2E-CRC for now because the 780G
+        #       never seems to have that enabled. The flag indicating whether
+        #       to use E2E should be read from the IDD Features characteristic
+        #       instead.
+
+        raw = self.idd_status.read_raw_value()
+        value = dbus_tools.dbus_to_python(raw)
+        self.logger.debug("IDD Status: " + value.hex())
+
+        # SAKE-decrypt the value
+        data = self.sh.server.session.server_crypt.decrypt(value)
+
+        pump_status = PumpStatus(data)
+        if pump_status.parse():
+            self.logger.debug(pump_status)
+        else:
+            self.logger.error("Failed to parse pump status")
+            return None
+
+        return pump_status
+
     def unsubscribe(self):
         self.idd_srcp.add_characteristic_cb(None)
         return
@@ -173,6 +200,20 @@ class IDDStatusReader():
             self.idd_srcp = chrc
         except Exception as e:
             self.logger.error("Failed to add characteristic SRCP")
+            self.logger.error(e)
+            return False
+
+        try:
+            # IDD service, Status characteristic
+            self.logger.info("Adding characteristic Status")
+            chrc = self.central.add_characteristic(
+                UUID.IDD_SERVICE, UUID.IDD_STATUS_CHAR)
+            while not chrc.resolve_gatt():
+                time.sleep(0.2)
+            assert "read" in dbus_tools.dbus_to_python(chrc.flags)
+            self.idd_status = chrc
+        except Exception as e:
+            self.logger.error("Failed to add characteristic Status")
             self.logger.error(e)
             return False
 
