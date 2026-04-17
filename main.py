@@ -205,6 +205,7 @@ def setup_actions():
         ('Read IDD status - Get Time In Range',       lambda: iddstatus.get_time_in_range()),
         ('Read IDD status - Get Insulin On Board',    lambda: iddstatus.get_insulin_on_board()),
         ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
+        ('Read IDD status - Get Active Basal Rate Delivery', lambda: iddstatus.get_active_basal_rate_delivery()),
         ('Read IDD status - Pump Status',             lambda: iddstatus.get_pump_status()),
 
         ('IDD status test all calls', lambda: iddstatus.test_all()),
