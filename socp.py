@@ -10,26 +10,9 @@ from sake_handler import SakeHandler
 from value_converter import ValueConverter
 from uuids import UUID
 
-class SocpOpCode(IntEnum):
-    READ_CURRENT_SESSION_ID = 0x8c,
-    READ_CURRENT_SESSION_ID_RESPONSE = 0x8d,
-    
-    GET_SENSOR_DETAILS = 0x90,
-    SENSOR_DETAILS_RESPONSE = 0x91
+from socp_opcodes import SocpOpCode
+from sensor_details import SensorDetails
 
-    READ_SESSION_START_TIME = 0x83,
-    READ_SESSION_START_TIME_RESPONSE = 0x84,
-
-    # TODO: calibration stuff must be supported by the pump
-
-    # 8c f4b1 (READ_CURRENT_SESSION_ID)
-    # 8d 0b a0c1 (READ_CURRENT_SESSION_ID_RESPONSE)
-
-    # 81 fffff9dd (GET_CALIBRATION_CONTEXT)
-    # 82 020000f0da (CALIBRATION_CONTEXT_RESPONSE)
-
-    # 90 4962 (GET_SENSOR_DETAILS)
-    # 91 071d00ffff60273420 (SENSOR_DETAILS_RESPONSE)
 
 class SocpController():
 
@@ -88,7 +71,13 @@ class SocpController():
     def read_sensor_details(self) -> None:
         raw = self._trigger_opcode(SocpOpCode.GET_SENSOR_DETAILS)
         data = self._check_and_get_resp(raw, SocpOpCode.SENSOR_DETAILS_RESPONSE)
-        self.logger.debug(f"read sensor details = {data.hex()}") # TODO: parse this?
+        # NOTE: we pass the *raw* data since we compute the CRC as part of the
+        #       parsing
+        obj = SensorDetails(raw, use_e2e=True)
+        if obj.parse():
+            self.logger.debug(obj)
+        else:
+            self.logger.error("Failed to parse Sensor Details")
         return
 
     def _check_and_get_resp(self, raw:bytes, expected:SocpOpCode) -> bytes:
