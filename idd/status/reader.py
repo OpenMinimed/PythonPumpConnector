@@ -8,6 +8,7 @@ from log_manager import LogManager
 from sake_handler import SakeHandler
 from uuids import UUID
 
+from idd.status.active_basal_rate_delivery import ActiveBasalRateDelivery
 from idd.status.opcodes import IddStatusReaderOpCode
 from idd.status.iob import InsulinOnBoardData
 from idd.status.pump_status import PumpStatus
@@ -81,7 +82,14 @@ class IDDStatusReader():
     def get_active_basal_rate_delivery(self):
         self.logger.info("Requesting Active Basal Rate Delivery")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_ACTIVE_BASAL_RATE_DELIVERY)
-        return data
+        if data is not None:
+            obj = ActiveBasalRateDelivery(data)
+            if obj.parse():
+                self.logger.debug(obj)
+                return obj
+            else:
+                self.logger.error("Failed to parse Active Basal Rate Delivery")
+        return None
 
     def get_insulin_on_board(self) -> InsulinOnBoardData | None:
         self.logger.info("Requesting Insulin On Board")
