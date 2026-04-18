@@ -115,16 +115,25 @@ class IDDStatusReader():
         return data
 
     def get_sensor_warm_up_time_remaining(self):
+        # NOTE: Returns 'Response Code' with 'Op Code not supported' on the
+        #       780G. Maybe only intended for direct communication with the
+        #       sensor?
         self.logger.info("Requesting Sensor Warm Up Time Remaining")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_SENSOR_WARM_UP_TIME_REMAINING)
         return data
 
     def get_sensor_calibration_status_icon(self):
+        # NOTE: Returns 'Response Code' with 'Op Code not supported' on the
+        #       780G. Maybe only intended for direct communication with the
+        #       sensor?
         self.logger.info("Requesting Sensor Calibration Status Icon")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_SENSOR_CALIBRATION_STATUS_ICON)
         return data
 
     def get_early_sensor_calibration_time(self):
+        # NOTE: Returns 'Response Code' with 'Op Code not supported' on the
+        #       780G. Maybe only intended for direct communication with the
+        #       sensor?
         self.logger.info("Requesting Early Sensor Calibration Time")
         data = self._send_and_receive_opcode(IddStatusReaderOpCode.GET_EARLY_SENSOR_CALIBRATION_TIME)
         return data
