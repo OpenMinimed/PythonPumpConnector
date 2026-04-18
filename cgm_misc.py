@@ -116,9 +116,11 @@ class CgmMiscData:
 
         toret = end - datetime.now()
         toret_hours = toret.total_seconds() / 3600
-        hours = int(toret_hours)
-        minutes = int((toret_hours - hours) * 60)
-        self.logger.info(f"remaining time until sensor expires = {hours}:{minutes:02d}")
+
+        sign    = "-" if toret_hours < 0 else ""
+        hours   = abs(int(toret_hours))
+        minutes = abs(int((toret_hours - hours) * 60))
+        self.logger.info(f"remaining time until sensor expires = {sign}{hours}:{minutes:02d}")
         return toret_hours
         
 
