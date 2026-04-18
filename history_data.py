@@ -622,11 +622,9 @@ class SGMeasurementData(HistoryEventData):
         # handle special SG values
         sg = self.sg_value
         if sg == 0x0301:
-            # TODO: figure out what this special value encodes
-            sg = f"{sg} mg/dL (0x{self.sg_value:04x})"
+            sg = "no value, sensor starting"
         elif sg == 0x0303:
-            # TODO: figure out what this special value encodes
-            sg = f"{sg} mg/dL (0x{self.sg_value:04x})"
+            sg = "no value, sensor updating"
         elif sg == 0x030d:
             sg = "< 50 mg/dL"
         else:
