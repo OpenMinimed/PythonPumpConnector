@@ -117,14 +117,18 @@ class PumpAdvertiser():
         return
 
     def __create_adv_cmd(self) -> str:
+        data = ""
 
-        pairing_flag = "80" if self.already_paired else "00"
-        
-        data = "02 01 06 "  # flags - we have turned BR/EDR off in self.startup_commands
-        data += f"12 FF F901 {pairing_flag} {self.mobile_name.encode().hex()} 00 " # manufacturer data
-        data += "02 0A 01 "  # tx power
-        sake_service = "81" if self.already_paired else "82"
-        data += f"03 03 {sake_service} FE "  # 16-bit service UUID
+        # Flags: we have turned BR/EDR off in self.startup_commands
+        data += "02 01 06"
+
+        # 16-bit Service Class UUIDs: SAKE
+        data += "03 03 "
+        data += "81 fe" if self.already_paired else "82 fe"
+
+        # Device Name
+        length = 1 + len(self.mobile_name)
+        data += f"{length:02x} 09 {self.mobile_name.encode().hex()}"
 
         data = data.replace(" ", "")
 
