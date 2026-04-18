@@ -189,6 +189,7 @@ def setup_actions():
         ('Read CGM run time',       lambda: cgmm.read_run_time()),
         ('Read CGM start time',     lambda: cgmm.read_start_time()),
         ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
+        ('Read CGM features',       lambda: cgmm.get_features()),
 
         ('Send certificate mgmt request', lambda: certman.send_request()),
         ('Send HATS request',             lambda: hatss.send_request()),

@@ -11,6 +11,8 @@ from value_converter import ValueConverter
 from sake_handler import SakeHandler
 from uuids import UUID
 
+from cgm_features import CGMFeatures
+
 
 class CgmStartTime():
 
@@ -122,7 +124,22 @@ class CgmMiscData:
         minutes = abs(int((toret_hours - hours) * 60))
         self.logger.info(f"remaining time until sensor expires = {sign}{hours}:{minutes:02d}")
         return toret_hours
-        
+
+    def get_features(self):
+        self.logger.info("Reading CGM Feature")
+
+        raw = self.feature_char.read_raw_value()
+        value = dbus_tools.dbus_to_python(raw)
+        self.logger.debug("CGM Feature: " + value.hex())
+
+        features = CGMFeatures(value)
+        if features.parse():
+            self.logger.debug(features)
+        else:
+            self.logger.error("Failed to parse pump features")
+            return None
+
+        return features
 
     def _configure_characteristics(self):
 
@@ -137,9 +154,16 @@ class CgmMiscData:
         while not self.start_time_char.resolve_gatt():
             time.sleep(0.2)
         assert "read" in dbus_tools.dbus_to_python(self.start_time_char.flags)
-        
+
+        self.feature_char = self.central.add_characteristic(
+            UUID.CGM_SERVICE, UUID.CGM_FEATURE_CHAR)
+        while not self.feature_char.resolve_gatt():
+            time.sleep(0.2)
+        assert "read" in dbus_tools.dbus_to_python(self.feature_char.flags)
+
         return
-    
+
+
 if __name__  == "__main__":
     from utils import add_submodule_to_path
     add_submodule_to_path()
