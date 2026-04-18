@@ -75,6 +75,11 @@ class HistoryEventData:
     def _pp_flags(x):
         return f"{x:09_b}".replace("0", ".").replace("_", " ")
 
+    @staticmethod
+    def _pp_flag_list(x, flag_type):
+        flags = ParseUtils.parse_flags(x, flag_type)
+        return ", ".join([f.name for f in flags])
+
 
 class UnknownEventData(HistoryEventData):
     def __init__(self, data: bytes):
@@ -141,6 +146,14 @@ class BolusActivationType(BaseEnum):
     COMMANDED                    = 0x5a
 
 
+class BolusFlag(BaseEnum):
+    BOLUS_DELAY_TIME_PRESENT         = 1<<0
+    BOLUS_TEMPLATE_NUMBER_PRESENT    = 1<<1
+    BOLUS_ACTIVATION_TYPE_PRESENT    = 1<<2
+    BOLUS_DELIVERY_REASON_CORRECTION = 1<<3
+    BOLUS_DELIVERY_REASON_MEAL       = 1<<4
+
+
 class BolusProgrammedP2Data(HistoryEventData):
     """Event data for the Bolus Programmed Part 2 of 2 event"""
 
@@ -159,26 +172,25 @@ class BolusProgrammedP2Data(HistoryEventData):
         # parse optional fields depending on flags
 
         self.bolus_delay_time = None
-        if self.flags & 0x01:  # Bolus Delay Time Present
+        if self.flags & BolusFlag.BOLUS_DELAY_TIME_PRESENT:
             self.bolus_delay_time, data = ParseUtils.consume_u16(data)
 
         self.bolus_template_number = None
-        if self.flags & 0x02:  # Bolus Template Number Present
+        if self.flags & BolusFlag.BOLUS_TEMPLATE_NUMBER_PRESENT:
             self.bolus_template_number, data = ParseUtils.consume_u8(data)
 
         self.bolus_activation_type = None
-        if self.flags & 0x04:  # Bolus Activation Type Present
+        if self.flags & BolusFlag.BOLUS_ACTIVATION_TYPE_PRESENT:
             self.bolus_activation_type, data = ParseUtils.consume_u8(data)
             assert BolusActivationType.contains_value(self.bolus_activation_type)
 
         return True, data
 
     def __str__(self):
-        # TODO: print named flags
         t = self.bolus_activation_type
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            "Flags:                 " + self._pp_flags(self.flags),
+            "Flags:                 " + self._pp_flag_list(self.flags, BolusFlag),
             "Bolus Delay Time:      " + self._pp(self.bolus_delay_time),
             "Bolus Template Number: " + self._pp(self.bolus_template_number),
             "Bolus Activation Type: "
@@ -248,28 +260,32 @@ class BolusDeliveredP2Data(HistoryEventData):
         # parse optional fields depending on flags
 
         self.bolus_activation_type = None
-        if self.flags & 0x01:  # Bolus Activation Type Present
+        if self.flags & self.Flag.BOLUS_ACTIVATION_TYPE_PRESENT:
             self.bolus_activation_type, data = ParseUtils.consume_u8(data)
             assert BolusActivationType.contains_value(self.bolus_activation_type)
 
         self.bolus_end_reason = None
-        if self.flags & 0x02:  # Bolus End Reason Present
+        if self.flags & self.Flag.BOLUS_END_REASON_PRESENT:
             self.bolus_end_reason, data = ParseUtils.consume_u8(data)
             assert BolusEndReason.contains_value(self.bolus_end_reason)
 
         self.annunciation_instance_id = None
-        if self.flags & 0x04:  # Annunciation Instance ID
+        if self.flags & self.Flag.ANNUNCIATION_INSTANCE_ID_PRESENT:
             self.annunciation_instance_id, data = ParseUtils.consume_u16(data)
 
         return True, data
 
+    class Flag(BaseEnum):
+        BOLUS_ACTIVATION_TYPE_PRESENT    = 1<<0
+        BOLUS_END_REASON_PRESENT         = 1<<1
+        ANNUNCIATION_INSTANCE_ID_PRESENT = 1<<2
+
     def __str__(self):
-        # TODO: print named flags
         t = self.bolus_activation_type
         r = self.bolus_end_reason
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Flags:                    " + self._pp_flags(self.flags),
+            f"Flags:                    " + self._pp_flag_list(self.flags, self.Flag),
             f"Bolus Start Time Offset:  {self.bolus_start_time_offset} s",
             f"Bolus Activation Type:    "
                 + ("--" if t is None else BolusActivationType(t).name),
@@ -306,18 +322,20 @@ class DeliveredBasalRateChangedData(HistoryEventData):
         # parse optional fields depending on flags
 
         self.basal_delivery_context = None
-        if self.flags & 0x01:  # Basal Delivery Context Present
+        if self.flags & self.Flag.BASAL_DELIVERY_CONTEXT_PRESENT:
             self.basal_delivery_context, data = ParseUtils.consume_u8(data)
             assert BasalDeliveryContext.contains_value(self.basal_delivery_context)
 
         return True, data
 
+    class Flag(BaseEnum):
+        BASAL_DELIVERY_CONTEXT_PRESENT = 1<<0
+
     def __str__(self):
-        # TODO: print named flags
         c = self.basal_delivery_context
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Flags:                  " + self._pp_flags(self.flags),
+            f"Flags:                  " + self._pp_flag_list(self.flags, self.Flag),
             f"Old Basal Rate:         {self.old_basal_rate} IU/h",
             f"New Basal Rate:         {self.new_basal_rate} IU/h",
             f"Basal Delivery Context: "
@@ -437,30 +455,36 @@ class TherapyContextData(HistoryEventData):
         # parse optional fields depending on flags
 
         self.basal_rate = None
-        if self.flags & 0x02:  # Basal Rate active
+        if self.flags & self.Flag.BASAL_RATE_ACTIVE:
             self.basal_rate, data = ParseUtils.consume_f32(data)
 
         self.insulin_delivery_stopped_reason = None
-        if self.flags & 0x08:  # Insulin Delivery Stopped
+        if self.flags & self.Flag.INSULIN_DELIVERY_STOPPED:
             self.insulin_delivery_stopped_reason, data = ParseUtils.consume_u8(data)
             assert InsulinDeliveryStoppedReason.contains_value(self.insulin_delivery_stopped_reason)
 
         self.tbr_type       = None
         self.tbr_adjustment = None
-        if self.flags & 0x10:  # TBR Active
+        if self.flags & self.Flag.TBR_ACTIVE:
             self.tbr_type,       data = ParseUtils.consume_u8(data)
             self.tbr_adjustment, data = ParseUtils.consume_f32(data)
             assert TBRType.contains_value(self.tbr_type)
 
         return True, data
 
+    class Flag(BaseEnum):
+        SENSOR_ENABLED           = 1<<0
+        BASAL_RATE_ACTIVE        = 1<<1
+        AUTO_MODE_ACTIVE         = 1<<2
+        INSULIN_DELIVERY_STOPPED = 1<<3
+        TBR_ACTIVE               = 1<<4
+
     def __str__(self):
-        # TODO: print named flags
         r = self.insulin_delivery_stopped_reason
         t = self.tbr_type
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Flags:                           " + self._pp_flags(self.flags),
+            f"Flags:                           " + self._pp_flag_list(self.flags, self.Flag),
             f"Basal Rate:                      " + self._pp(self.basal_rate, "IU/h"),
             f"Insulin Delivery Stopped Reason: "
                 + ("--" if r is None else InsulinDeliveryStoppedReason(r).name),
