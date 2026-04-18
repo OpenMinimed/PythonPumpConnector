@@ -6,6 +6,7 @@ add_submodule_to_path() # bit of hacking ;)
 import logging
 import threading
 import argparse
+import random
 import traceback
 import pickle
 
@@ -272,15 +273,21 @@ def main():
 
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
-    parser.add_argument('-p', '--advertise_paired',
-                        help='Mobile name to use if this device has already been paired with a pump. In a format of 6 number digits.',
-                        default=None)
+    parser.add_argument('adv_name',
+        nargs='?',
+        help='Name to use for advertising. 0–7 characters. Will be chosen randomly if not supplied.')
+    parser.add_argument('-r', '--reconnect',
+        action='store_true',
+        help='Reconnect to an already paired pump')
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
     #parser.add_argument('--no-adv-interval-hack',
     #    action='store_true', default=False,
     #    help='Do not use the software hack to shorten the advertising interval on reconnects')
     args = parser.parse_args()
+
+    if args.reconnect and not args.adv_name:
+        parser.error("You must provide an advertising name for reconnects.")
 
     # check if bt is even on
     if not is_bluetooth_active():
@@ -302,17 +309,20 @@ def main():
     sh = SakeHandler()
     ph = PeripheralHandler(adapter_addr)
 
-    # if user did not provide an already-paired name, start from fresh
-    if not args.advertise_paired:
-        forget_pump_devices()
-        mobile_name = None
-        paired = False
+    if args.reconnect:
+        adv_name = args.adv_name
     else:
-        mobile_name = "Mobile " + args.advertise_paired
-        paired = True
+        forget_pump_devices()
+        if args.adv_name is None:
+            # generate a random name for advertising
+            adv_name = str(random.randint(100000, 999999))
+            logging.info(f"Generated random name for advertising: {adv_name}")
+        else:
+            adv_name = args.adv_name
 
-    pa = PumpAdvertiser(mobile_name, paired)#, use_adv_interval_hack=not args.no_adv_interval_hack)
-    
+    logging.info(f"Creating advertiser with name '{adv_name}'")
+    pa = PumpAdvertiser(adv_name, args.reconnect)
+
     def on_connect(dev:Device):
         global device
         device = dev
