@@ -428,6 +428,8 @@ class InsulinDeliveryStoppedReason(BaseEnum):
     AUTO_SUSPENDED           = 0x03
     LOW_SG_SUSPENDED         = 0x04
     NOT_SEATED               = 0x05
+    unknown_08               = 0x08  # not in MMM, but found in some IDD History dumps
+                                     # TODO: filling the cannula?
     PLGM_ON_LOW_SG_SUSPENDED = 0x0a
 
 
