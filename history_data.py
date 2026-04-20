@@ -788,15 +788,21 @@ class AnnunciationClearedData(HistoryEventData):
 
     def _parse_impl(self, data):
         # mandatory fields
-        self.fault_id,    data = ParseUtils.consume_u16(data)
+        self.fault_type,  data = ParseUtils.consume_u16(data)
         self.instance_id, data = ParseUtils.consume_u16(data)
 
         return True, data
 
     def __str__(self):
+        # show fault type as name if we have it in our list
+        if AnnunciationType.contains_value(self.fault_type):
+            t = AnnunciationType(self.fault_type).name
+        else:
+            t = f"unknown (0x{self.fault_type:04x})"
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Fault ID:    {self.fault_id}",
+            f"Fault Type:  {t}",
             f"Instance ID: {self.instance_id}",
         ]) + "\n)"
 
