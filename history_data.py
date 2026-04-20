@@ -723,6 +723,60 @@ class NGPReferenceTimeData(HistoryEventData):
         ]) + "\n)"
 
 
+class AnnunciationEventFlag(BaseEnum):
+    AUXINFO1_PRESENT = 1<<0
+    AUXINFO2_PRESENT = 1<<1
+    AUXINFO3_PRESENT = 1<<2
+    AUXINFO4_PRESENT = 1<<3
+    AUXINFO5_PRESENT = 1<<4
+    AUXINFO6_PRESENT = 1<<5
+    ALERT_SILENCED   = 1<<6
+
+
+class AnnunciationType(BaseEnum):
+    NO_DELIVERY                           = 0x0007
+    FAULT8                                = 0x0008
+    BOLUS_STOPPED                         = 0x0033
+    MAX_FIL_REACHED                       = 0x0047
+    MAX_FIL_REACHED_2                     = 0x0048
+    CHECK_BOLUS_BG_ALERT                  = 0x0067
+    LOW_RESERVOIR_ALERT                   = 0x0069
+    LOW_RESERVOIR_ALERT_2                 = 0x006a
+    PERSONAL_REMINDER                     = 0x006c
+    SET_CHANGE_REMINDERS                  = 0x006d
+    IOB_CLEARED_ALERT                     = 0x0075
+    CALIBRATE_NOW_ALERT                   = 0x0307
+    CHANGE_SENSOR_1                       = 0x0309
+    CHANGE_SENSOR_2                       = 0x030a
+    NO_SG_CALIBRATION_OCCURRED            = 0x0312
+    CHANGE_SENSOR_3                       = 0x0315
+    SENSOR_ERROR_ALERT                    = 0x0321
+    LOW_SG_PLGM_ALERT                     = 0x0322
+    LOW_SG_SUSPEND_ALERT                  = 0x0323
+    PREDICTIVE_RESUME_ALERT               = 0x0327
+    THRESHOLD_SUSPEND_ALARM               = 0x0329
+    MANUAL_RESUME                         = 0x032f
+    HIGH_SENSOR_GLUECOSE2                 = 0x0330
+    CL1_EXIT_HIGH_SG                      = 0x0333
+    CL1_EXIT_ALERT                        = 0x0334
+    CL1_UMIN_ALERT                        = 0x0335
+    CL1_UMAX_ALERT                        = 0x0336
+    CL1_OFF_ALERT                         = 0x033a
+    SEVERE_LOW_SG                         = 0x033b
+    CL1_BOLUS_RECOMMENDED                 = 0x0341
+    CALIBRATION_RECOMMENDED               = 0x0345
+    FIRST_CALIBRATION_SUCCESSFUL          = 0x034b
+    EARLY_CALIBRATION                     = 0x034c
+    CALIBRATE_REMINDER                    = 0x0365
+
+
+class PumpAnnunciationStatus(BaseEnum):
+    UNDETERMINED = 0x0f
+    PENDING      = 0x33
+    SNOOZED      = 0x3c
+    CONFIRMED    = 0x55
+
+
 class AnnunciationClearedData(HistoryEventData):
     """Event data for the Annunciation Cleared event"""
 
@@ -744,6 +798,251 @@ class AnnunciationClearedData(HistoryEventData):
             f"{self.__class__.__name__}(",
             f"Fault ID:    {self.fault_id}",
             f"Instance ID: {self.instance_id}",
+        ]) + "\n)"
+
+
+class AnnunciationData(HistoryEventData):
+    """Event data for the Annunciation Consolidated event"""
+
+    def __init__(self, data: bytes):
+        super().__init__(data)
+
+        self.event_flags: int | None = None
+        self.annunciation_id: int | None = None
+        self.annunciation_type: int | None = None
+        self.annunciation_status: AnnunciationStatus | None = None
+        self.timestamp: dt.datetime | None = None
+        self.auxiliary_data: dict | None = None
+
+    def _parse_impl(self, data):
+        # mandatory fields
+        self.event_flags,     data = ParseUtils.consume_u8(data)
+        self.annunciation_id, data = ParseUtils.consume_u16(data)
+        annunciation_type,    data = ParseUtils.consume_u16(data)
+        annunciation_status,  data = ParseUtils.consume_u8(data)
+        timestamp,            data = ParseUtils.consume_u32(data)
+
+        if annunciation_type & 0xf000 != 0xf000:
+            self.logger.error(f"Unknown annunciation type: 0x{annunciation_type:04x}")
+            return False, data
+
+        self.annunciation_type = annunciation_type & 0x0fff
+        if self.annunciation_type == 0:
+            # TODO: assign a dummy AnnunciationType?
+            return True, data
+
+        # NOTE: There are so many possible annunciation types (potentially one
+        #       for every alert the pump can display) that it seems better, for
+        #       now, to just go with the raw number value here instead of
+        #       converting to AnnunciationType and demanding that we have that
+        #       particular value listed and named in there already.
+        #assert AnnunciationType.contains_value(self.annunciation_type)
+        #self.annunciation_type = AnnunciationType(self.annunciation_type)
+
+        assert PumpAnnunciationStatus.contains_value(annunciation_status)
+        self.annunciation_status = PumpAnnunciationStatus(annunciation_status)
+
+        # seconds since 2000-01-01 00:00:00.000
+        ref = dt.datetime(2000, 1, 1, 0, 0, 0, 0)
+        self.timestamp = ref + dt.timedelta(seconds=timestamp)
+
+        # NOTE: We ignore the AUXINFOx_PRESENT flags and just parse the
+        #       auxiliary data by annunciation type, i.e. the number of
+        #       expected bytes in that package depends on the type. It is not
+        #       clear anyway why Medtronic shoehorned their data into the
+        #       structure defined by the spec for the IDD Annunciation Status.
+        #       They changed it already, by adding a 6th AuxInfo field and
+        #       associated flag. Why not go fully custom then?
+        #
+        #       We just assert the presence of the appropriate AUXINFOx_PRESENT
+        #       flags to have an additional sanity check.
+
+        # The timestamp populates the first two AuxInfo fields. Since the
+        # timestamp seems to be mandatory in Medtronic's annunciations, these
+        # two flags should always be set.
+        assert self.event_flags & AnnunciationEventFlag.AUXINFO1_PRESENT
+        assert self.event_flags & AnnunciationEventFlag.AUXINFO2_PRESENT
+
+        # Auxiliary Data (variable length and contents)
+        d = {}
+        if self.annunciation_type in [
+            AnnunciationType.PREDICTIVE_RESUME_ALERT,
+            AnnunciationType.NO_SG_CALIBRATION_OCCURRED,
+            AnnunciationType.MANUAL_RESUME,
+            AnnunciationType.CALIBRATE_REMINDER,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["contextual_time_minutes"], data = ParseUtils.consume_u8(data)
+            d["contextual_time_hours"],   data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.LOW_SG_SUSPEND_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is mg/dL (?)
+            d["sg_value"],                data = ParseUtils.consume_f16(data)
+            d["contextual_time_minutes"], data = ParseUtils.consume_u8(data)
+            d["contextual_time_hours"],   data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.LOW_SG_PLGM_ALERT,
+            AnnunciationType.THRESHOLD_SUSPEND_ALARM,
+            AnnunciationType.SEVERE_LOW_SG,
+            AnnunciationType.HIGH_SENSOR_GLUECOSE2,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            # unit is mg/dL (?)
+            d["sg_value"], data = ParseUtils.consume_f16(data)
+        elif self.annunciation_type in [
+            AnnunciationType.LOW_RESERVOIR_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is IU (?)
+            d["units_remaining"], data = ParseUtils.consume_f32(data)
+        elif self.annunciation_type in [
+            AnnunciationType.BOLUS_STOPPED,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO5_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO6_PRESENT
+            # unit is IU (?)
+            d["units_programmed"], data = ParseUtils.consume_f32(data)
+            # unit is IU (?)
+            d["units_delivered"],  data = ParseUtils.consume_f32(data)
+        elif self.annunciation_type in [
+            AnnunciationType.MAX_FIL_REACHED,
+            AnnunciationType.MAX_FIL_REACHED_2,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is IU (?)
+            d["units_delivered"],  data = ParseUtils.consume_f32(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CL1_EXIT_HIGH_SG,
+            AnnunciationType.CL1_OFF_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["basal_pattern"], data = ParseUtils.consume_u8(data)
+            _,                  data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CL1_EXIT_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            d["basal_pattern"],      data = ParseUtils.consume_u8(data)
+            _,                       data = ParseUtils.consume_u8(data)
+            d["delivery_suspended"], data = ParseUtils.consume_u8(data)
+            _,                       data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CL1_UMIN_ALERT,
+            AnnunciationType.CL1_UMAX_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["delivery_suspended"], data = ParseUtils.consume_u8(data)
+            _,                       data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CALIBRATION_RECOMMENDED,
+            AnnunciationType.EARLY_CALIBRATION,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["sg_expiration_time_minutes"], data = ParseUtils.consume_u8(data)
+            d["sg_expiration_time_hours"],   data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.FIRST_CALIBRATION_SUCCESSFUL,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO5_PRESENT
+            d["early_calibration_time_minutes"],       data = ParseUtils.consume_u8(data)
+            d["early_calibration_time_hours"],         data = ParseUtils.consume_u8(data)
+            d["calibration_recommended_time_minutes"], data = ParseUtils.consume_u8(data)
+            d["calibration_recommended_time_hours"],   data = ParseUtils.consume_u8(data)
+            d["sg_expiration_time_minutes"],           data = ParseUtils.consume_u8(data)
+            d["sg_expiration_time_hours"],             data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.NO_DELIVERY,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["occlusion_type"], data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CL1_BOLUS_RECOMMENDED,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            # unit is kg/L
+            d["bg_value"], data = ParseUtils.consume_f16(data)
+        elif self.annunciation_type in [
+             AnnunciationType.PERSONAL_REMINDER,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["reminder_name"], data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.SET_CHANGE_REMINDERS,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["days_since_set_change"], data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CHECK_BOLUS_BG_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["duration_since_last_bolus"], data = ParseUtils.consume_u16(data)
+        elif self.annunciation_type in [
+            AnnunciationType.LOW_RESERVOIR_ALERT_2,
+        ]:
+            # NOTE: order of minutes and hours switched, compared to other
+            #       annunciations
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["low_reservoir_time_remaining_hours"],   data = ParseUtils.consume_u8(data)
+            d["low_reservoir_time_remaining_minutes"], data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CALIBRATE_NOW_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["calibration_type"], data = ParseUtils.consume_u8(data)
+            _,                     data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.CALIBRATE_NOW_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            d["wait_duration"], data = ParseUtils.consume_u8(data)
+            _,                  data = ParseUtils.consume_u8(data)
+        elif self.annunciation_type in [
+            AnnunciationType.IOB_CLEARED_ALERT,
+        ]:
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            d["time_when_iob_cleared_minutes"],        data = ParseUtils.consume_u8(data)
+            d["time_when_iob_cleared_hours"],          data = ParseUtils.consume_u8(data)
+            d["iob_partial_status_remaining_minutes"], data = ParseUtils.consume_u8(data)
+            d["iob_partial_status_remaining_hours"],   data = ParseUtils.consume_u8(data)
+        else:
+            # we assume that other annunciation types do not have any
+            # auxiliary data
+            pass
+
+        self.auxiliary_data = d
+
+        return True, data
+
+    def __str__(self):
+        # show annunciation type as name if we have it in our list
+        if AnnunciationType.contains_value(self.annunciation_type):
+            t = AnnunciationType(self.annunciation_type).name
+        else:
+            t = f"unknown (0x{self.annunciation_type:04x})"
+
+        has_aux = ((self.auxiliary_data is not None)
+            and (len(self.auxiliary_data) > 0))
+
+        return "\n    ".join([
+            f"{self.__class__.__name__}(",
+            f"Event Flags:         " + self._pp_flag_list(self.event_flags, AnnunciationEventFlag),
+            f"Annunciation ID:     {self.annunciation_id}",
+            f"Annunciation Type:   " + t,
+            f"Annunciation Status: " + self.annunciation_status.name,
+            f"Timestamp:           {self.timestamp}",
+            f"Auxiliary Data:      "
+                + ("--" if not has_aux else str(self.auxiliary_data)),
         ]) + "\n)"
 
 
@@ -802,7 +1101,7 @@ class HistoryData:
         HistoryEventType.CGM_ANALYTICS_DATA_BACKFILL:  CGMAnalyticsData,
         HistoryEventType.NGP_REFERENCE_TIME:           NGPReferenceTimeData,
         HistoryEventType.ANNUNCIATION_CLEARED:         AnnunciationClearedData,
-        #HistoryEventType.ANNUNCIATION_CONSOLIDATED:
+        HistoryEventType.ANNUNCIATION_CONSOLIDATED:    AnnunciationData,
         HistoryEventType.MAX_AUTO_BASAL_RATE_CHANGED:  MaxAutoBasalRateChangedData,
     }
 
