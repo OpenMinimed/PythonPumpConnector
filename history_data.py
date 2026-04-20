@@ -755,10 +755,15 @@ class AnnunciationType(BaseEnum):
     SENSOR_ERROR_ALERT                    = 0x0321
     LOW_SG_PLGM_ALERT                     = 0x0322
     LOW_SG_SUSPEND_ALERT                  = 0x0323
+    ALERT_BEFORE_LOW_SG                   = 0x0325
     PREDICTIVE_RESUME_ALERT               = 0x0327
     THRESHOLD_SUSPEND_ALARM               = 0x0329
+    LOW_SG_SUSPEND_BEFORE_LOW_QUITE_ALERT = 0x032a
+    LOW_SG_SUSPEND_BEFORE_LOW_ALERT       = 0x032b
+    LOW_SG_SUSPENSION_TIMEOUT             = 0x032e
     MANUAL_RESUME                         = 0x032f
     HIGH_SENSOR_GLUECOSE2                 = 0x0330
+    HIGH_SG_ALERT                         = 0x0331
     CL1_EXIT_HIGH_SG                      = 0x0333
     CL1_EXIT_ALERT                        = 0x0334
     CL1_UMIN_ALERT                        = 0x0335
