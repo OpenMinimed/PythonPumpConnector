@@ -225,7 +225,12 @@ def main_input_loop():
 
     while True:
         print("\n> ", end='')
-        key = input().strip().lower()
+        try:
+            key = input().strip().lower()
+        except UnicodeDecodeError:
+            print("could not decode command!")
+            continue
+
         if key in actions:
             try:
                 actions[key][1]()
