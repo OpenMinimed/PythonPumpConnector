@@ -651,6 +651,8 @@ class SGMeasurementData(HistoryEventData):
             sg = "no value, sensor starting"
         elif sg == 0x0303:
             sg = "no value, sensor updating"
+        elif sg == 0x0308:
+            sg = "> 400 mg/dL"
         elif sg == 0x030d:
             sg = "< 50 mg/dL"
         else:
