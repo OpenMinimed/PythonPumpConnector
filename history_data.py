@@ -836,6 +836,9 @@ class AnnunciationData(HistoryEventData):
         self.auxiliary_data: dict | None = None
 
     def _parse_impl(self, data):
+
+        # TODO: 0xf010: Extra event data after parsing: 1 byte(s) left, should be 0 for 07421807f00f4df89e310000 
+        
         # mandatory fields
         self.event_flags,     data = ParseUtils.consume_u8(data)
         self.annunciation_id, data = ParseUtils.consume_u16(data)

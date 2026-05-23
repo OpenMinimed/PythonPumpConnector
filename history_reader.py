@@ -184,7 +184,7 @@ class HistoryReader():
         toret = self.__parse_data()
   
         if len(toret) != exp_len:
-            raise RuntimeError(f"invalid count of data received: expected = {exp_len} vs actual: {len(toret)}")
+            self.logger.error(f"invalid count of data received: expected = {exp_len} vs actual: {len(toret)}")
 
         return toret
     
