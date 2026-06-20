@@ -92,7 +92,7 @@ def initialize_components(pump):
     dbm = DatabaseManager(hr)
     logging.info("DatabaseManager created")
 
-    return    
+    return
 
 
 def unsubscribe_components():
@@ -141,10 +141,10 @@ def reload_modules():
     # (That commit has since been merged into the bluezero codebase.)
     logging.info("Unsubscribing components...")
     unsubscribe_components()
-        
+
     # Clear actions dict first to break closures holding references
     actions.clear()
-    
+
     # Remove modules from sys.modules and reimport
     for mod_name in modules_to_reload:
         try:
@@ -154,7 +154,7 @@ def reload_modules():
             logging.info(f"Reloaded: {mod_name}")
         except Exception as e:
             logging.error(f"Reload failed for {mod_name}: {e}")
-    
+
     # Reinitialize components and actions
     initialize_components(pump)
     setup_actions()
@@ -249,7 +249,7 @@ def main_logic():
     while True:
         # dont waste cpu cycles
         sleep(0.1)
-        
+
         # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
@@ -257,7 +257,7 @@ def main_logic():
         # connection to pump must have been established and GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
-        
+
         # initialize stuff if not already
         if not initialized:
             initialized = True
@@ -298,7 +298,7 @@ def main():
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
-    
+
     if not bt_privacy_on():
         raise Exception("BT privacy does not seem to be on. You need to manually edit /etc/bluetooth/main.conf and add 'Privacy = device' under [General]. After that, restart the bluethoothd service and re-pair on your pump!")
 
@@ -360,7 +360,7 @@ def main():
     for char in [mn, mn_model, sn, hw_rev, fw_rev, sw_rev, system_id, pnp_id, cert_data]:
         ph.add_char(service_info_serv, char)
     ph.add_char(sake_serv, sake_port)
-   
+
     # finally before calling bluezero, start our advertisement and main logic thread
     pa.start_adv()
 
