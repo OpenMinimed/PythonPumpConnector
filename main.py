@@ -199,7 +199,7 @@ def setup_actions():
         ('Read IDD History - first record',    lambda: hr.get_first_record()),
         ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
         #(f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
-        (f'Sync all data to the database', lambda: dbm.sync()),
+        (f'Sync all data to the database (may take several minutes!)', lambda: dbm.sync()),
         ('Read device info', lambda: devinf.get_device_info()),
 
         ('Read pump features', lambda: iddfeatures.get_pump_features()),
