@@ -35,7 +35,7 @@ Pump and script then spend another couple of seconds in GATT discovery after whi
 
 The script will currently simply restart the advertising after any problems in that process. You can stop it by pressing `Ctrl+C` in the terminal.
 
-If you stop the script after a successful SAKE handshake (thus terminating the BLE connection) and later want to reconnect to the pump without going through the whole pairing procedure again, you can call `main.py` with the  `-p` argument and pass it the random number that was used in the previous pairing step. Your pump should still show it as part of the device name it is currently connected to. This will handle the reconnect from the pump and also start another SAKE handshake.
+If you stop the script after a successful SAKE handshake (thus terminating the BLE connection) and later want to reconnect to the pump without going through the whole pairing procedure again, you can call `main.py` with the  `-r` argument and pass it the random number that was used in the previous pairing step. Your pump should still show it as part of the device name it is currently connected to. This will handle the reconnect from the pump and also start another SAKE handshake.
 
 
 ## Prerequisites
