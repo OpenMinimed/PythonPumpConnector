@@ -8,7 +8,8 @@ import psutil
 
 def add_submodule_to_path():
     d = os.path.dirname(os.path.abspath(__file__))
-    d = os.path.join(d, "PythonSake")
+    d = os.path.join(d, "..", "PythonSake")
+    d = os.path.abspath(d)
     if not os.path.isdir(d):
         raise FileNotFoundError(f"you are missing the submodule checkout! please fix")
     sys.path.append(d)

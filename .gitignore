@@ -1,8 +1,8 @@
 __pycache__
 *.py[codz]
 *$py.class
-*.log
-orig.py
+
 *_history_data.txt
-history.db
+database/*.db
 logs/*
+database/*.png

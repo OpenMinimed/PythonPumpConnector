@@ -1,11 +1,14 @@
 import sqlite3
 import datetime as dt
+import os
 import logging
 from collections import Counter
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from history.data import HistoryData, HistoryEventType
 from utils.log_manager import LogManager
-from database.manager import DB_PATH
+from database.constants import DB_PATH
 
 
 class DBViewer:
@@ -25,7 +28,7 @@ class DBViewer:
         rows = cursor.fetchall()
         conn.close()
 
-        for event_type, seq_number, relative_offset, raw_hex in rows:
+        for event_type, seq_number, relative_offset, raw_hex in tqdm(rows):
             raw_data = bytes.fromhex(raw_hex)
             record = HistoryData(raw_data, use_e2e=False)
             if record.parse():
@@ -45,14 +48,15 @@ class DBViewer:
     def print_summary(self):
         types = []
         for record in self.records:
-            print(record)
+            # print(record)
             if record.event_type.name not in types:
                 types.append(record.event_type.name)
 
         print(f"\nparsed {len(self.records)} objects from database")
-        print("types in the database:")
+        print("\ntypes in the database:")
         for t in types:
-            print(f"  {t}")
+            print(f"\t{t}")
+        return
 
     def plot_daily_counts(self, output_path="history_graph.png"):
         dates = []
@@ -72,8 +76,6 @@ class DBViewer:
             logging.warning("No records with dates to plot")
             return
 
-        import matplotlib.pyplot as plt
-
         days = [d.strftime("%Y-%m-%d") for d, _ in sorted_days]
         counts = [c for _, c in sorted_days]
 
@@ -84,7 +86,7 @@ class DBViewer:
         plt.title("Daily History Record Counts")
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(output_path)
+        plt.savefig(os.path.join(os.path.dirname(__file__), output_path))
         plt.close()
         print(f"Daily counts graph saved to {output_path}")
 
@@ -110,13 +112,13 @@ class DBViewer:
         conn.close()
 
         if not rows:
-            print("No gaps found - all sequence numbers are contiguous")
+            print("\nno gaps found - all sequence numbers are contiguous")
             return rows
 
         total_missing = sum(r[2] for r in rows)
-        print(f"Found {len(rows)} gap(s), {total_missing} total missing records:")
+        print(f"\nfound {len(rows)} gap(s), {total_missing} total missing records:")
         for gap_start, gap_end, count in rows:
-            print(f"  {gap_start} - {gap_end}: {count} missing")
+            print(f"\t{gap_start} - {gap_end}: {count} missing")
         return rows
 
 
@@ -127,7 +129,7 @@ if __name__ == "__main__":
     from utils.os_utils import add_submodule_to_path
     add_submodule_to_path()
 
-    LogManager.init(level=logging.DEBUG)
+    LogManager.init(level=logging.INFO)
 
     viewer = DBViewer()
     viewer.load_records()

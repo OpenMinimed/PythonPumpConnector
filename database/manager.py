@@ -1,14 +1,11 @@
 import sqlite3
 import os
-import logging
 from typing import List, Optional
 
 from history.data import HistoryData
 from utils.log_manager import LogManager
 from history.reader import HistoryReader
-
-DB_PATH = "history.db"
-
+from database.constants import DB_PATH
 
 class DatabaseManager:
     
