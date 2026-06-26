@@ -97,10 +97,14 @@ class PumpAdvertiser():
                 else:
                     self.adv_thread_time = 0.05 # userland workaround if we can not use the kernel level fix. if we spam the commands, we can get down under the 1s+ default advertising interval without any extra effort
 
-        # NOTE: the pump only accepts advertisers with a specific naming scheme
-        self.adv_name = "Mobile " + adv_name
-        if not self.__is_valid_adv_name(self.adv_name):
-            raise Exception(f"Invalid advertising name given: {self.adv_name}")
+        if already_paired:
+            # NOTE: the pump ignores the advertising name for reconnects
+            self.adv_name = None
+        else:
+            # NOTE: the pump only accepts advertisers with a specific naming scheme
+            self.adv_name = "Mobile " + adv_name
+            if not self.__is_valid_adv_name(self.adv_name):
+                raise Exception(f"Invalid advertising name given: {self.adv_name}")
 
         # run btmgmt commands
         for c in self.startup_commands:
@@ -123,8 +127,9 @@ class PumpAdvertiser():
         data += "81 fe" if self.already_paired else "82 fe"
 
         # Device Name
-        length = 1 + len(self.adv_name)
-        data += f"{length:02x} 09 {self.adv_name.encode().hex()}"
+        if not self.already_paired:
+            length = 1 + len(self.adv_name)
+            data += f"{length:02x} 09 {self.adv_name.encode().hex()}"
 
         data = data.replace(" ", "")
 
@@ -152,7 +157,10 @@ class PumpAdvertiser():
             self.logger.error(f"advertisement already running? skipping...")
             return
         self.adv_started = datetime.now()
-        self.logger.info(f"advertisement started at {self.adv_started} as {self.adv_name}")
+        if self.adv_name:
+            self.logger.info(f"advertisement started at {self.adv_started} as {self.adv_name}")
+        else:
+            self.logger.info(f"advertisement started at {self.adv_started} without a device name")
         thread = Thread(target = self.__adv_thread)
         thread.start()
         return

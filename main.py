@@ -275,9 +275,6 @@ def main():
         help='MAC address of the Bluetooth adapter to use')
     args = parser.parse_args()
 
-    if args.reconnect and not args.adv_name:
-        parser.error("You must provide an advertising name for reconnects.")
-
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
@@ -299,7 +296,8 @@ def main():
     ph = PeripheralHandler(adapter_addr)
 
     if args.reconnect:
-        adv_name = args.adv_name
+        # NOTE: advertising name is ignored for reconnects
+        adv_name = None
     else:
         forget_pump_devices()
         if args.adv_name is None:
@@ -309,7 +307,11 @@ def main():
         else:
             adv_name = args.adv_name
 
-    logging.info(f"Creating advertiser with name '{adv_name}'")
+    if adv_name:
+        logging.info(f"Creating advertiser with name '{adv_name}'")
+    else:
+        logging.info("Creating advertiser without name")
+
     pa = PumpAdvertiser(adv_name, args.reconnect)
 
     def on_connect(dev:Device):

@@ -124,10 +124,10 @@ You can also provide a custom name (max 7 characters):
 If the script was stopped after a successful SAKE handshake, reconnect without re-pairing:
 
 ```bash
-./main.py --reconnect <name>
+./main.py --reconnect
 ```
 
-Replace `<name>` with the name used during pairing. The second terminal with `bluetoothctl` is not needed for reconnects.
+The name used during pairing need not be supplied here again. The second terminal with `bluetoothctl` is not needed for reconnects.
 
 ### Database viewer
 
