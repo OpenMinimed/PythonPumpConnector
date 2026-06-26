@@ -1,6 +1,8 @@
 bluezero
 colorlog
 crc
+dbus-python
 matplotlib
 psutil
+pycryptodomex
 tqdm
