@@ -6,7 +6,7 @@
 
 This script lets you connect to a 700-series Medtronic pump from a Linux computer, just like Medtronic's MiniMed Mobile app does, but without a mobile phone or any Medtronic software.
 
-![screenshot](https://raw.githubusercontent.com/OpenMinimed/PythonPumpConnector/refs/heads/main/banner.png)
+![screenshot](./custom-mobile.jpg)
 
 ## Table of contents
 
@@ -118,6 +118,8 @@ Alternatively, you can provide a custom name instead of the random number (max. 
 > The script may prompt for `sudo` to set up BLE advertising.
 
 After GATT discovery and the SAKE handshake, the script presents an interactive menu of commands for reading pump data (CGM, features, event history, etc.).
+
+![screenshot](./commands.png)
 
 > [!NOTE]
 > One special command syncs the pump's event history with a local SQLite database. This is useful for preserving the full history offline, because we can currently only access the last 4–5 days worth of history data.
