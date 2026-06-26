@@ -3,10 +3,9 @@ import os
 import logging
 from typing import List, Optional
 
-from history.data import HistoryData, HistoryEventType
+from history.data import HistoryData, HistoryEventType, NGPReferenceTimeData
 from utils.log_manager import LogManager
 from history.reader import HistoryReader
-
 
 class DatabaseManager:
 
@@ -16,7 +15,19 @@ class DatabaseManager:
         self.hr = hr
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self._create_db_if_not_exists()
+        if self.hr:
+            self.hr.record_callback = self._store_record
         return
+
+    def _store_record(self, record):
+        conn = sqlite3.connect(self.DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR IGNORE INTO history_records (event_type, seq_number, relative_offset, raw_data)
+            VALUES (?, ?, ?, ?)
+        ''', (record.event_type.value, record.sequence_number, record.relative_offset, record.raw_data.hex()))
+        conn.commit()
+        conn.close()
 
     def _create_db_if_not_exists(self):
         if not os.path.exists(self.DB_PATH):
@@ -84,7 +95,6 @@ class DatabaseManager:
         self.logger.debug(f"Identified {len(ranges)} contiguous missing ranges: {ranges}")
 
         # Fetch records for each range
-        all_records: list[HistoryData] = []
         for min_seq, max_seq in ranges:
             self.logger.debug(f"Fetching records from {min_seq} to {max_seq}")
             try:
@@ -92,7 +102,6 @@ class DatabaseManager:
                 query_min = max(0, min_seq - 1)
                 query_max = max_seq + 1
                 records = self.hr.get_records_between(query_min, query_max)
-                all_records.extend(records)
                 self.logger.debug(f"Fetched {len(records)} records for range {min_seq}-{max_seq} using query {query_min}-{query_max}")
              
                 # Check for holes in this batch. The expected range is still the
@@ -105,19 +114,8 @@ class DatabaseManager:
                 self.logger.error(f"Failed to get records between {min_seq} and {max_seq}: {e}")
                 continue
 
-        self.logger.debug(f"Total records to store: {len(all_records)}")
-        # Store the records (use INSERT OR IGNORE to handle any duplicates)
-        stored_count = 0
-        for record in all_records:
-            cursor.execute('''
-                INSERT OR IGNORE INTO history_records (event_type, seq_number, relative_offset, raw_data)
-                VALUES (?, ?, ?, ?)
-            ''', (record.event_type.value, record.sequence_number, record.relative_offset, record.raw_data.hex()))
-            stored_count += 1
-
-        conn.commit()
         conn.close()
-        self.logger.info(f"Synced {stored_count} records")
+        self.logger.info("Sync complete")
         return
 
     def get_all_db_records(self) -> List[HistoryData]:
@@ -151,7 +149,7 @@ class DatabaseManager:
 
 if __name__ == "__main__":
 
-    from utils import add_submodule_to_path
+    from utils.os_utils import add_submodule_to_path
     add_submodule_to_path()
  
     LogManager.init(level=logging.DEBUG)

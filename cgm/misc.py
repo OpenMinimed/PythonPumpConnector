@@ -165,7 +165,7 @@ class CgmMiscData:
 
 
 if __name__  == "__main__":
-    from utils import add_submodule_to_path
+    from utils.os_utils import add_submodule_to_path
     add_submodule_to_path()
 
     test = bytes.fromhex("ea0704040c323680ff")

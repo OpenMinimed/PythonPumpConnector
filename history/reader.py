@@ -68,9 +68,10 @@ class HistoryReader():
     EXPECTED_SUCC = bytes([IddRacpOpCode.RESPONSE_CODE, IddRacpOperator.NULL, IddRacpOpCode.REPORT_RECORDS, IddRacpResponseCode.SUCCESS])
 
 
-    def __init__(self, central:Central):
+    def __init__(self, central:Central, record_callback=None):
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self.central = central
+        self.record_callback = record_callback
 
         self.idd_history_data = None
         self.idd_racp         = None
@@ -218,6 +219,8 @@ class HistoryReader():
             history_record = HistoryData(raw_record, use_e2e=False)
             if history_record.parse():
                 self.logger.debug(history_record)
+                if self.record_callback:
+                    self.record_callback(history_record)
                 toret.append(history_record)
             else:
                 self.logger.error("Failed to parse history record")
