@@ -108,13 +108,13 @@ On the pump, start searching for new devices. In the second terminal, run:
 
 The script advertises as `Mobile XXXXXX` (random number). After a few seconds, the pump should find it and prompt you to connect. Accept the pairing request in the `bluetoothctl` terminal when prompted.
 
-After GATT discovery and the SAKE handshake, the script presents an interactive menu of commands for reading pump data (CGM, features, event history, etc.).
-
-You can also provide a custom name (max 7 characters):
+Alternatively, you can provide a custom name instead of the random number (max. 7 characters):
 
 ```bash
 ./main.py <name>
 ```
+
+After GATT discovery and the SAKE handshake, the script presents an interactive menu of commands for reading pump data (CGM, features, event history, etc.).
 
 > [!NOTE]
 > The script may prompt for `sudo` to set up BLE advertising.
