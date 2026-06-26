@@ -1,63 +1,156 @@
-# PythonPumpConnector
+# Python Pump Connector
 
-> [!WARNING]  
-> Read this carefully since there are a lot of gotchas and things that can go wrong!
+This script lets you connect to a 700-series Medtronic pump from our own Linux computer, just like Medtronic's MiniMed Mobile app does, but without a mobile phone and without any Medtronic software involved.
 
-You can advertise, connect, perform the handshake and talk with a pump using this script.
-
-Currently only Linux is supported.
-
+> [!WARNING]
+> This is proof-of-concept code used mainly for reverse-engineering. Do not rely on it for therapy!
 
 ![screenshot](https://raw.githubusercontent.com/OpenMinimed/PythonPumpConnector/refs/heads/main/banner.png)
 
 ## Table of contents
 
-- [Table of contents](#table-of-contents)
+- [How to set this up](#how-to-set-this-up)
 - [How to use](#how-to-use)
-- [Prerequisites](#prerequisites)
-- [Fixing ATT\_MTU size](#fixing-att_mtu-size)
-- [Fixing the Bluezero echo problem](#fixing-the-bluezero-echo-problem)
-- [IO capability](#io-capability)
-- [Pairing confirmation](#pairing-confirmation)
-- [Adjusting the advertising interval](#adjusting-the-advertising-interval)
-- [Random failures](#random-failures)
 - [Debugging](#debugging)
+- [Notes](#notes)
+
+
+## How to set this up
+
+> [!IMPORTANT]
+> Currently only Linux is supported.
+
+1. Clone this repo, including submodules
+
+    ```sh
+    git clone --recurse-submodules git@github.com:OpenMinimed/PythonPumpConnector.git
+    ```
+
+2. Install system dependencies
+
+    ```sh
+    # Ubuntu/Debian (untested)
+    sudo apt install libcairo2-dev pkg-config python3-dev python3-pip libgirepository1.0-dev libcairo-gobject2
+
+    # Fedora (tested on 43)
+    sudo dnf install cairo-devel pkg-config python3-devel gobject-introspection-devel cairo-gobject-devel
+    ```
+
+3. Install Python dependencies
+
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+4. Get sources for BlueZ 5.66 (or older)
+
+    You may want to consult your Linux distribution's guide or the internet on how to rebuild system packages. Or simply fetch the [upstream sources](https://github.com/bluez/bluez/tree/5.66) if you want to build from them directly.
+
+5. Patch and rebuild BlueZ
+
+    In file `src/shared/gatt-server.c`, find the function `find_info_cb()` and in it, find the call to `encode_find_info_rsp()`. Insert `mtu = 23;` right before that call. Save the file, then rebuild and reinstall BlueZ.
+
+6. Update BlueZ config
+
+    Open the BlueZ main config file (typically `/etc/bluetooth/main.conf`). In section `[General]`, add an entry `Privacy = device`.
+
+    Restart the bluetooth daemon to apply the change:
+    ```sh
+    sudo systemctl restart bluetoothd
+    ```
+
+7. Patch bluezero (tested with version 0.9.1 only)
+
+    Find the location of modules installed by pip:
+    ```sh
+    pip show bluezero
+    ```
+    In the directory listed as `Location`, open file `bluezero/localGATT.py`. Inside class `Characteristic`, find function `WriteFunction()` and comment out the call to `self.Set()`:
+    ```python
+    def WriteValue(self, value, options):  # pylint: disable=invalid-name
+        """
+        DBus method for setting the characteristic value
+
+        :return: value
+        """
+        if self.write_callback:
+            self.write_callback(dbus_tools.dbus_to_python(value),
+                                dbus_tools.dbus_to_python(options))
+        # REMOVED:
+        # self.Set(constants.GATT_CHRC_IFACE, 'Value', value)
+    ```
+
 
 ## How to use
 
-The goal is to connect to a 700-series Medtronic pump from our own computer, just like Medtronic's MiniMed Mobile app does, but with no mobile phone and no Medtronic software involved. The connection is over Bluetooth LE, so you will need a computer that supports it.
+The pump communicates using Bluetooth LE, so you will need a computer that supports that.
 
-If your pump still lists a phone as connected device you have to remove that first because the pump can only connect to one "phone" at a time. On your pump, start the search for new devices to connect to. Then run `main.py` from this repository in a terminal. The script will choose a device name like "Mobile 123456" with a random number (i.e. it changes every time you run the script). It includes this name in its log output for reference and uses it to advertise as suitable Bluetooth LE device for the pump to connect to. Note that the script may ask you to input your password because the steps necessary to configure and run Bluetooth LE advertising typically need to be executed as superuser (using `sudo`).
+### Pairing
 
-After a couple of seconds, the pump should have found the device and prompt you to connect to it. Confirming to connect should trigger a pairing request on your computer which you need to accept (see corresponding section below).
+Pump and computer need to be paired initially, i.e. your computer must be known to and trusted by the pump in order to establish the connection. This step needs to be performed only once. Once both devices are paired they can be reconnected without doing this again.
+
+On your computer, open two terminals. The first one will handle the pairing confirmation, the second one will run the actual script.
+
+In the first terminal, run the following:
+
+```bash
+bluetoothctl --agent=NoInputNoOutput
+```
+
+If your pump still lists another connected mobile device, you have to remove that first because the pump can only connect to one "phone" at a time.
+
+On your pump, start the search for new devices to connect to. Then run `main.py` from this repository in the second terminal. The script will choose a device name like "Mobile 123456" with a random number (i.e. it changes every time you run the script). It includes this name in its log output for reference and uses it to advertise as suitable Bluetooth LE device for the pump to connect to.
+
+If you like you can also provide a custom name instead of the random number like so:
+
+```bash
+./main.py <name>
+```
+
+Replace `<name>` with any string of length 0–7.
+
+> [!NOTE]
+> The script may ask you to input your password because the steps necessary to configure and run Bluetooth LE advertising typically need to be executed as superuser (using `sudo`).
+
+After a couple of seconds, the pump should have found the device and prompt you to connect to it. Confirming to connect should trigger a pairing request in the first terminal on your computer. Accept that request.
 
 Pump and script then spend another couple of seconds in GATT discovery after which the script finally initiates the SAKE handshake. See the script's log output in the terminal for details. Any problems during that process are also reported there.
 
 The script will currently simply restart the advertising after any problems in that process. You can stop it by pressing `Ctrl+C` in the terminal.
 
-If you stop the script after a successful SAKE handshake (thus terminating the BLE connection) and later want to reconnect to the pump without going through the whole pairing procedure again, you can call `main.py` with the  `-p` argument and pass it the random number that was used in the previous pairing step. Your pump should still show it as part of the device name it is currently connected to. This will handle the reconnect from the pump and also start another SAKE handshake.
+If the SAKE handshake was completed successfully, the script shows a number of commands that you can execute to retrieve data from the pump: CGM data, pump features, event history, …
 
 
-## Prerequisites
+### Reconnects
 
-* Clone this repo with submodules
-	```sh
-	git clone --recurse-submodules git@github.com:OpenMinimed/PythonPumpConnector.git
-	```
-* Install system dependencies
-	```sh
-	# Ubuntu/Debian (untested)
-	sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev libcairo-gobject2
+If you stop the script after a successful SAKE handshake (thus terminating the BLE connection) and later want to reconnect to the pump without going through the whole pairing procedure again, you can start the script like so:
 
-	# Fedora (tested on 43)
-	sudo dnf install cairo-devel pkg-config python3-devel gobject-introspection-devel cairo-gobject-devel
-	```
-* Install Python dependencies
-	```sh
-	pip install -r requirements.txt
-	```
+```bash
+./main.py --reconnect <name>
+```
 
-## Fixing ATT_MTU size
+Replace `<name>` with the number/name that was used in the previous pairing step. Your pump should still show it as part of the device name it is currently connected to. This will handle the reconnect from the pump and also start another SAKE handshake.
+
+You do not need the other terminal for reconnects.
+
+
+## Debugging
+
+If you are having trouble getting a connection to work, open another terminal and run
+
+```bash
+btmon -w $(date +"%Y-%m-%d_%T")_pump.log
+```
+
+before you start `main.py` in the other terminal. This generates a timestamped btsnoop file which can be loaded in Wireshark for further analysis of the Bluetooth communication.
+
+
+## Notes
+
+Here we keep some of the old notes that go into a bit more detail than is required for getting the script running. You may want to read this if you are interested in some background information. It could also be useful if you want to join development or if you are trying to debug problems with the procedure described above.
+
+
+### Fixing ATT_MTU size
 
 After the pump connecting to our script, BlueZ seems to routinely send a request to increase the maximum allowed MTU size (`ATT_EXCHANGE_MTU_REQ`). The default MTU size is 23 bytes. The pump answers this request with a `ATT_EXCHANGE_MTU_RSP` indicating that it supports an MTU size of at most 184 bytes.
 
@@ -82,24 +175,24 @@ Tested and working versions:
 - Bluez 5.55 and 5.66
 
 
-## Fixing the Bluezero echo problem
+### Fixing the Bluezero echo problem
 
 There is an echo bug (or feature?) in the Bluezero library, which causes the written data to be sent back on a characteristic. This is exactly the inverse of what we actually need, since we want to answer with the next handshake data instead. The fix is fairly simple and is highlighted in the [Bluezero #382 issue](https://github.com/ukBaz/python-bluezero/issues/382). You basically need to comment out the line <code>self.Set(constants.GATT_CHRC_IFACE, 'Value', value)</code> in the <code>WriteValue</code> function in <code>localGATT.py</code>. This was confirmed to be working on bluezero v0.9.1.
 
 
-## IO capability
+### IO capability
 
 Setting IO capability to 3 (<code>NoInputNoOutput</code>) is also very important, because the device asks for the MITM flag, but does not support LE Secure Connections. This makes the kernel default to the *Just Works* method and will not immediately reject the pairing request. This is performed automatically by the script.
 
 
-## Pairing confirmation
+### Pairing confirmation
 
 By default, you will need to have a desktop client that handles the acceptance of pairing requests. Be ready for desktop notifications and quickly pressing accept on them!
 
 If there is no client running, the kernel automatically rejects the pairing requests. One way we got this to work on the command line was by running `bluetoothctl --agent=NoInputNoOutput` in a separate terminal before starting `main.py`. `bluetoothctl` will then prompt for accepting/declining the pairing request in the terminal.
 
 
-## Adjusting the advertising interval
+### Adjusting the advertising interval
 
 With BlueZ, most computers seem to be using a rather long default advertising interval of > 1 second, i.e. successive advertising packets are sent every second (or even less frequent). This does not seem to be a problem for the initial pairing step where the pump is instructed to look for advertising packets from a suitable device. Scanning for such a devices frequently is rather energy-heavy, but it makes sure the device is found quickly.
 
@@ -158,11 +251,6 @@ The actual advertising interval is computed by multiplying the value in `adv_min
 Note that this adjustment is only necessary for _reconnects_. The initial connection and pairing seems to work just fine with the long default advertising intervals. So if you have trouble changing the interval on your machine and only want to the get the initial connection to the pump going, do not (yet) waste your time with this adjustment.
 
 
-## Random failures
+### Random failures
 
 Sometimes no BT traffic actually gets sent to the PC and the pairing does not even start. We believe this is a GUI bug in the pump code. The workaround is very simple, just go back to the <code>Paired Devices > Pair New Device</code> menu and retry. If you disable the BT adapter on your PC while the pump is waiting on a timeout, you can regain control of your pump's buttons faster.
-
-
-## Debugging
-
-Use <code>btmon</code>. You can also save a btsnoop file using the flag <code>-w</code>, that you can load with Wireshark later.

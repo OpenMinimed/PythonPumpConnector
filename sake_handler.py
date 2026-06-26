@@ -3,9 +3,11 @@ import queue
 
 from log_manager import LogManager
 from pysake.server import SakeServer
-from pysake.constants import KEYDB_PUMP_EXTRACTED, KEYDB_PUMP_HARDCODED
+from pysake.constants import KEYDB_PUMP_EXTRACTED
 
-class SakeHandler:
+from singleton import Singleton
+
+class SakeHandler(metaclass=Singleton):
 
     pump_enabled: bool = False
     char = None
@@ -73,6 +75,11 @@ class SakeHandler:
     def _handle_write(self, value: bytes, options: dict):
         value = bytes(value)
         self.logger.debug(f"sake write callback received: {value.hex()}")
+        
+        if self.server.get_stage() == 6:
+            self.logger.warning(f"preventing sake-reset to get into handshake steps!")
+            return
+
         output = self.server.handshake(value)
 
         if output is None and self.server.get_stage() == 6:

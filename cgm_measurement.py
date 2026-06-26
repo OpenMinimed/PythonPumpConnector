@@ -1,7 +1,8 @@
-import crc
 import logging
 
 from log_manager import LogManager
+from parse_utils import ParseUtils
+from value_converter import ValueConverter
 
 
 class CGMMeasurement:
@@ -26,13 +27,13 @@ class CGMMeasurement:
 
         # parsed data
         self.flags: int = None
-        self.glucose: int|float = None
+        self.glucose: float = None
         self.time_offset: int = None
         self.status: int = None
         self.cal_temp: int = None
         self.warning: int = None
-        self.trend: int|float = None
-        self.quality: int|float = None
+        self.trend: float = None
+        self.quality: float = None
 
     def parse(self) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
@@ -49,56 +50,46 @@ class CGMMeasurement:
 
         # validate E2E-CRC
         if self.use_crc:
-            # extract and snip E2E-CRC from record (its last 2 bytes)
-            crc = int.from_bytes(data[-2:], "little")
+            if not ValueConverter.check_crc(data):
+                self.logger.error("E2E-CRC mismatch")
+                return False
             data = data[:-2]
 
-            # CRC of the remaining record
-            computed_crc = self.e2e_crc(data)
-
-            if crc != computed_crc:
-                self.logger.error("E2E-CRC mismatch: computed %04x, got %04x"
-                    % (computed_crc, crc))
-                return False
 
         # mandatory fields
-        size,    data = self._consume(data, 1)
-        flags,   data = self._consume(data, 1)
-        glucose, data = self._consume(data, 2)
-        offset,  data = self._consume(data, 2)
+        size,    data = ParseUtils.consume(data, 1)
+        flags,   data = ParseUtils.consume(data, 1)
+        glucose, data = ParseUtils.consume_f16(data)
+        offset,  data = ParseUtils.consume(data, 2)
 
         if length != size:
             self.logger.error("Record length %d does not match size field %d"
                 % (length, size))
             return False
 
-        glucose = self.decode_sfloat(glucose)
-
         # Sensor Status Annunciation (optional)
 
         status = 0
         if flags & 0x80:  # Status-Octet present
-            status, data = self._consume(data, 1)
+            status, data = ParseUtils.consume(data, 1)
 
         cal_temp = 0
         if flags & 0x40:  # Cal/Temp-Octet present
-            cal_temp, data = self._consume(data, 1)
+            cal_temp, data = ParseUtils.consume(data, 1)
 
         warning = 0
         if flags & 0x20:  # Warning-Octet present
-            warning, data = self._consume(data, 1)
+            warning, data = ParseUtils.consume(data, 1)
 
         # CGM Trend Information (optional)
         trend = None
         if flags & 0x01:  # CGM Trend Information present
-            trend, data = self._consume(data, 2)
-            trend = self.decode_sfloat(trend)
+            trend, data = ParseUtils.consume_f16(data)
 
         # CGM Quality (optional)
         quality = None
         if flags & 0x02:  # CGM Quality present
-            quality, data = self._consume(data, 2)
-            quality = self.decode_sfloat(quality)
+            quality, data = ParseUtils.consume_f16(data)
 
         # we are done, there must not be any data left in the record
         if len(data) > 0:
@@ -113,52 +104,44 @@ class CGMMeasurement:
         self.cal_temp    = cal_temp
         self.warning     = warning
         self.trend       = trend
-        self.quality     = quality
+        self.quality     = quality * 10 # TODO: 100% is 10.0 ?? we need a bad quality signal to check this
         return True
 
     def __str__(self):
+        trend_arrows = ""
+        if self.trend is not None:
+            # 780G's manual gives a relation between rise/fall rates and
+            # arrows displayed:
+            #
+            # - 1 arrow: SG has been rising or falling at a rate of 20-40 mg/dL
+            #   over the last 20 minutes, or 1-2 mg/dL per minute.
+            #
+            # - 2 arrows: SG has been rising or falling at a rate of 40-60 mg/dL
+            #   over the last 20 minutes, or 2-3 mg/dL per minute.
+            #
+            # - 3 arrows: SG has been rising or falling at a rate of more than
+            #   60 mg/dL over the last 20 minutes, or more than 3 mg/dL per
+            #   minute.
+            n = min(3, int(abs(self.trend)))
+            if n > 0:
+                arrow = "🠅" if self.trend > 0 else "🠇"
+                trend_arrows = f" ({arrow*n})"
+
         return "\n    ".join([
             f"{self.__class__.__name__}(",
             f"Flags:                     {self.flags:08b}",
-            f"CGM Glucose Concentration: {self.glucose} mg/dL",
+            f"CGM Glucose Concentration: {self.glucose} mg/dL ({ValueConverter.mgdl_to_mmolL(self.glucose)} mmol/L)",
             f"Time Offset:               {self.time_offset} min",
             f"Status:                    {self.status:08b}",
             f"Cal/Temp:                  {self.cal_temp:08b}",
             f"Warning:                   {self.warning:08b}",
             f"CGM Trend Information:     "
-                + ("--" if self.trend   is None else f"{self.trend} mg/dL/min"),
+                + ("--" if self.trend   is None else f"{self.trend} mg/dL/min{trend_arrows}"),
             f"CGM Quality:               "
                 + ("--" if self.quality is None else f"{self.quality} %"),
         ]) + "\n)"
 
-    @staticmethod
-    def _consume(data: bytes, n: int) -> int:
-        # NOTE: copying this bytes object every time is rather wasteful
-        assert n <= len(data)
-        value = int.from_bytes(data[0:n], "little")
-        return value, data[n:]
 
-    @staticmethod
-    def decode_sfloat(value: int) -> int | float:
-        e = (value & 0xf000) >> 12
-        m = (value & 0x0fff)
-        if e & 0x8:
-            e = e - 0x10
-        if m & 0x800:
-            m = m - 0x1000
-        return m * 10**e
-
-    @staticmethod
-    def e2e_crc(data: bytes) -> int:
-        calc = crc.Calculator(crc.Configuration(
-            width=16,
-            polynomial=0x1021,
-            init_value=0xffff,
-            final_xor_value=0,
-            reverse_input=False,
-            reverse_output=False,
-        ))
-        return calc.checksum(data)
 
 
 if __name__ == "__main__":
@@ -170,4 +153,4 @@ if __name__ == "__main__":
         print(m)
     else:
         print("Failed to parse measurement")
-
+        

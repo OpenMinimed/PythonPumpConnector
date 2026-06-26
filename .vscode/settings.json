@@ -1,5 +1,8 @@
 {
   "python.analysis.extraPaths": [
     "${workspaceFolder}/PythonSake"
-  ]
+  ],
+  "files.exclude": {
+    "**/__pycache__": true
+  }
 }

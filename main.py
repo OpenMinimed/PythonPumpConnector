@@ -6,7 +6,9 @@ add_submodule_to_path() # bit of hacking ;)
 import logging
 import threading
 import argparse
-import time
+import random
+import traceback
+import pickle
 
 from bluezero import adapter
 from bluezero.device import Device
@@ -18,61 +20,258 @@ LogManager.init(level=logging.DEBUG)
 from pump_advertiser import PumpAdvertiser
 from peripheral_handler import PeripheralHandler, BleService, BleChar
 from sake_handler import SakeHandler
-from sg_reader import SGReader
-# from socp import SocpController
 
-ph:PeripheralHandler = None
+import datetime as dt
+import importlib
+import sys
+
+DUMP_COUNT = 1000
+
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
+pump = None
 
-def main_logic():
+# Component instances
+sgr = None
+socpc = None
+cgmm = None
+certman = None
+hr = None
+hatss = None
+devinf = None
+iddstatus = None
+iddfeatures = None
 
-    first = True
-    sg_reader: SGReader = None
-    last_read = None
+# Actions dict
+actions = {}
+
+# HOW TO ADD A NEW MODULE:
+# 1. Add global variable declaration at module level (e.g., new_component = None)
+# 2. Add import in initialize_components() function
+# 3. Instantiate in initialize_components() function
+# 4. Add module name to modules_to_reload list in reload_modules()
+# 5. Add unsubscribe call in unsubscribe_components()
+# 6. Add action in setup_actions() function
+
+def initialize_components(pump):
+
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures
+
+    from sg_reader import SGReader
+    from socp import SocpController
+    from cgm_misc import CgmMiscData
+    from cm import CertificateManagement
+    from history_reader import HistoryReader
+    from hats import HATS
+    from device_info import DeviceInfo
+    from database_manager import DatabaseManager
+    from idd.status.reader import IDDStatusReader
+    from idd.features.reader import IDDFeaturesReader
+
+    sgr = SGReader(pump)
+    logging.info("sg reader created")
+    socpc = SocpController(pump)
+    logging.info("SocpController created")
+    cgmm = CgmMiscData(pump)
+    logging.info("CgmMiscData created")
+    certman = CertificateManagement(pump)
+    logging.info("CertificateManagement created")
+    hr = HistoryReader(pump)
+    logging.info("HistoryReader created")
+    hatss = HATS(pump)
+    logging.info("HATS created")
+    devinf = DeviceInfo(pump)
+    logging.info("DeviceInfo created")
+    iddstatus = IDDStatusReader(pump)
+    logging.info("IDDStatusReader created")
+    iddfeatures = IDDFeaturesReader(pump)
+    logging.info("IDDFeaturesReader created")
+
+    # special one that uses 'hr' instead of 'pump'
+    dbm = DatabaseManager(hr)
+    logging.info("DatabaseManager created")
+
+    return
+
+
+def unsubscribe_components():
+
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus, iddfeatures
+
+    sgr.unsubscribe()
+    socpc.unsubscribe()
+    cgmm.unsubscribe()
+    certman.unsubscribe()
+    hr.unsubscribe()
+    hatss.unsubscribe()
+    devinf.unsubscribe()
+    iddstatus.unsubscribe()
+    iddfeatures.unsubscribe()
+
+    return
+
+def reload_modules():
+
+    global actions, pump
+
+    modules_to_reload = [
+        'sg_reader',
+        'socp',
+        'cgm_misc',
+        'cm',
+        'history_reader',
+        'hats',
+        'device_info',
+        'database_manager',
+        'idd.status.reader',
+        'idd.features.reader',
+    ]
+
+    # We have to unsubscribe from the component's characteristic
+    # notifications/indications before reloading. This will clear the
+    # associated callbacks that would otherwise add up with every reload
+    # because bluezero does not check for duplicate callbacks being added.
+    #
+    # Inside the component, call add_characteristic_cb(None) to clear the
+    # callback.
+    #
+    # see https://github.com/ukBaz/python-bluezero/issues/342#issuecomment-894165954
+    #
+    # (That commit has since been merged into the bluezero codebase.)
+    logging.info("Unsubscribing components...")
+    unsubscribe_components()
+
+    # Clear actions dict first to break closures holding references
+    actions.clear()
+
+    # Remove modules from sys.modules and reimport
+    for mod_name in modules_to_reload:
+        try:
+            if mod_name in sys.modules:
+                del sys.modules[mod_name]
+            importlib.import_module(mod_name)
+            logging.info(f"Reloaded: {mod_name}")
+        except Exception as e:
+            logging.error(f"Reload failed for {mod_name}: {e}")
+
+    # Reinitialize components and actions
+    initialize_components(pump)
+    setup_actions()
+    logging.info("Components re-initialized")
+    return
+
+def print_help():
+    print("\n\n" + "="*40)
+    print("Available commands:")
+    for k, (desc, _) in actions.items():
+        print(f"  {k}: {desc}")
+    return
+
+def save_history():
+    filename = dt.datetime.now().strftime("%Y-%m-%d__%H-%M-%S_history_data.txt")
+
+    # get history data from pump
+    records = hr.get_last_n_records(DUMP_COUNT)
+
+    # write data to file as hexstring
+    with open(filename, "w") as f:
+        for r in records:
+            f.write(r.raw_data.hex() + "\n")
+
+def setup_actions():
+    global actions
+
+    numbered_actions = [
+        ('Read sensor glucose value', lambda: sgr.get_value()),
+        ('Read sensor details',       lambda: socpc.read_sensor_details()),
+
+        ('Read CGM run time',       lambda: cgmm.read_run_time()),
+        ('Read CGM start time',     lambda: cgmm.read_start_time()),
+        ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
+        ('Read CGM features',       lambda: cgmm.get_features()),
+
+        ('Send certificate mgmt request', lambda: certman.send_request()),
+        ('Send HATS request',             lambda: hatss.send_request()),
+
+        ('Read IDD History - record count',    lambda: hr.get_available_record_count()),
+        ('Read IDD History - last record',     lambda: hr.get_last_record()),
+        ('Read IDD History - first record',    lambda: hr.get_first_record()),
+        ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
+        #(f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
+        ('Sync all history data to the database (may take several minutes!)', lambda: dbm.sync()),
+        ('Read device info', lambda: devinf.get_device_info()),
+
+        ('Read pump features', lambda: iddfeatures.get_pump_features()),
+
+        ('Read IDD status - Get Time In Range',       lambda: iddstatus.get_time_in_range()),
+        ('Read IDD status - Get Insulin On Board',    lambda: iddstatus.get_insulin_on_board()),
+        ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
+        ('Read IDD status - Get Active Basal Rate Delivery', lambda: iddstatus.get_active_basal_rate_delivery()),
+        ('Read IDD status - Pump Status',             lambda: iddstatus.get_pump_status()),
+
+        ('IDD status test all calls', lambda: iddstatus.test_all()),
+    ]
+
+    actions = {
+        'h': ('Show help/commands', lambda: print_help()),
+        'r': ('Reload all modules', lambda: reload_modules()),
+    }
+
+    for i,act in enumerate(numbered_actions):
+        actions[str(i + 1)] = act
+
+def main_input_loop():
 
     while True:
+        print("\n> ", end='')
+        try:
+            key = input().strip().lower()
+        except UnicodeDecodeError:
+            print("could not decode command!")
+            continue
 
+        if key in actions:
+            try:
+                actions[key][1]()
+                print_help()
+            except Exception as e:
+                trace = traceback.print_exc()
+                print(f"Action '{actions[key][0]}' failed: {e} {trace if trace is not None else ''}")
+        elif key:
+            print(f"Unknown key: {key}. Press 'h' for help.")
+
+def main_logic():
+    global sgr, socpc, cgmm, certman, hr, pump
+
+    initialized = False
+
+    while True:
+        # dont waste cpu cycles
         sleep(0.1)
-        
-        # SAKE handshake must have been completed
+
+        # SAKE handshake must have been completed, wait for it
         if sh is None or not sh.is_done():
             continue
 
-        # connection to pump must have been established
-        # GATT discovery must have been completed
+        # connection to pump must have been established and GATT discovery must have been completed
         if not device or not device.services_resolved:
             continue
 
-        if first:
-            logging.info("welcome from the main logic!")
-            first = False
+        # initialize stuff if not already
+        if not initialized:
+            initialized = True
             assert device.services_resolved
 
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            sg_reader = SGReader(pump)
-            logging.debug("sg reader created")
+            initialize_components(pump)
+            setup_actions()
 
-            #socpc = SocpController(pump)
-            #logging.debug("SocpController created")
-
-        
-        # try to read the SG every minute
-        if (last_read is None or time.monotonic() - last_read > 60) and sg_reader is not None:
-            last_read = time.monotonic()
-            try:
-                sg = sg_reader.get_value(sh)
-                logging.info(f"read sg = {sg} mg/dl ({sg_reader.mgdl_to_mmolL(sg)} mmol/L)")
-                #socpc.trigger_session_id(sh)
-
-            except Exception as e:
-                logging.error(f"failed to read sg: {e}")
-
-        # TODO: put some ipython here for testing or something
-    
+            # Run main input loop
+            print_help()
+            main_input_loop()
 
 def main():
 
@@ -80,17 +279,26 @@ def main():
 
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
-    parser.add_argument('-p', '--advertise_paired',
-                        help='Mobile name to use if this device has already been paired with a pump. In a format of 6 number digits.',
-                        default=None)
+    parser.add_argument('adv_name',
+        nargs='?',
+        help='Name to use for advertising. 0–7 characters. Will be chosen randomly if not supplied.')
+    parser.add_argument('-r', '--reconnect',
+        action='store_true',
+        help='Reconnect to an already paired pump')
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
+    #parser.add_argument('--no-adv-interval-hack',
+    #    action='store_true', default=False,
+    #    help='Do not use the software hack to shorten the advertising interval on reconnects')
     args = parser.parse_args()
+
+    if args.reconnect and not args.adv_name:
+        parser.error("You must provide an advertising name for reconnects.")
 
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
-    
+
     if not bt_privacy_on():
         raise Exception("BT privacy does not seem to be on. You need to manually edit /etc/bluetooth/main.conf and add 'Privacy = device' under [General]. After that, restart the bluethoothd service and re-pair on your pump!")
 
@@ -107,17 +315,20 @@ def main():
     sh = SakeHandler()
     ph = PeripheralHandler(adapter_addr)
 
-    # if user did not provide an already-paired name, start from fresh
-    if not args.advertise_paired:
-        forget_pump_devices()
-        mobile_name = None
-        paired = False
+    if args.reconnect:
+        adv_name = args.adv_name
     else:
-        mobile_name = "Mobile " + args.advertise_paired
-        paired = True
+        forget_pump_devices()
+        if args.adv_name is None:
+            # generate a random name for advertising
+            adv_name = str(random.randint(100000, 999999))
+            logging.info(f"Generated random name for advertising: {adv_name}")
+        else:
+            adv_name = args.adv_name
 
-    pa = PumpAdvertiser(mobile_name, paired)
-    
+    logging.info(f"Creating advertiser with name '{adv_name}'")
+    pa = PumpAdvertiser(adv_name, args.reconnect)
+
     def on_connect(dev:Device):
         global device
         device = dev
@@ -149,7 +360,7 @@ def main():
     for char in [mn, mn_model, sn, hw_rev, fw_rev, sw_rev, system_id, pnp_id, cert_data]:
         ph.add_char(service_info_serv, char)
     ph.add_char(sake_serv, sake_port)
-   
+
     # finally before calling bluezero, start our advertisement and main logic thread
     pa.start_adv()
 
