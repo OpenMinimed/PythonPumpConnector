@@ -114,10 +114,13 @@ Alternatively, you can provide a custom name instead of the random number (max. 
 ./main.py <name>
 ```
 
+> [!NOTE]
+> The script may prompt for `sudo` to set up BLE advertising.
+
 After GATT discovery and the SAKE handshake, the script presents an interactive menu of commands for reading pump data (CGM, features, event history, etc.).
 
 > [!NOTE]
-> The script may prompt for `sudo` to set up BLE advertising.
+> One special command syncs the pump's event history with a local SQLite database. This is useful for preserving the full history offline, because we can currently only access the last 4–5 days worth of history data.
 
 ### Reconnects
 
@@ -138,6 +141,9 @@ python3 -m database.viewer
 ```
 
 This parses all stored records, prints them, lists event types, detects sequence-number gaps, and generates a daily datapoint-count graph (`history_graph.png`).
+
+> [!NOTE]
+> The viewer does not require a connection to the pump. It works solely on the local database file.
 
 ## Debugging
 
