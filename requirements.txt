@@ -3,3 +3,4 @@ colorlog
 crc
 matplotlib
 psutil
+tqdm
