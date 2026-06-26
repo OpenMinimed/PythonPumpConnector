@@ -28,7 +28,7 @@ This script lets you connect to a 700-series Medtronic pump from a Linux compute
 1. Clone this repo, including submodules
 
     ```sh
-    git clone --recurse-submodules git@github.com:OpenMinimed/PythonPumpConnector.git
+    git clone --recurse-submodules https://github.com/OpenMinimed/PythonPumpConnector.git
     ```
 
 2. Install system dependencies
