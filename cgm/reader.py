@@ -4,11 +4,11 @@ from bluezero.central import Central
 import threading
 import time
 
-from cgm_measurement import CGMMeasurement
-from log_manager import LogManager
+from cgm.measurement import CGMMeasurement
+from utils.log_manager import LogManager
 
-from sake_handler import SakeHandler
-from uuids import UUID
+from ble.sake import SakeHandler
+from utils.uuids import UUID
 
 
 class SGReader:

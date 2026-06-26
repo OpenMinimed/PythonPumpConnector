@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import IntEnum
-from value_converter import ValueConverter
+from utils.value_converter import ValueConverter
 
 class ParseUtils():
     

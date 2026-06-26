@@ -2,17 +2,11 @@ import crc
 import logging
 import datetime as dt
 
-from enum import IntEnum
+from utils.log_manager import LogManager
+from utils.parse_utils import ParseUtils
+from utils.value_converter import ValueConverter
 
-from log_manager import LogManager
-from parse_utils import ParseUtils
-from value_converter import ValueConverter
-
-
-class BaseEnum(IntEnum):
-    @classmethod
-    def contains_value(cls, v):
-        return v in cls._value2member_map_
+from utils.base_enum import BaseEnum
 
 
 class HistoryEventType(BaseEnum):

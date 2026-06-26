@@ -1,11 +1,11 @@
 import threading
 import queue
 
-from log_manager import LogManager
+from utils.log_manager import LogManager
 from pysake.server import SakeServer
 from pysake.constants import KEYDB_PUMP_EXTRACTED
 
-from singleton import Singleton
+from utils.singleton import Singleton
 
 class SakeHandler(metaclass=Singleton):
 

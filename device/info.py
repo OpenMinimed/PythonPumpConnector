@@ -4,8 +4,8 @@ from bluezero.central import Central
 import threading
 import time
 
-from log_manager import LogManager
-from uuids import UUID
+from utils.log_manager import LogManager
+from utils.uuids import UUID
 
 class DeviceInfo():
 

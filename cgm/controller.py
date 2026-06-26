@@ -5,13 +5,13 @@ import threading
 import time
 from enum import IntEnum
 
-from log_manager import LogManager
-from sake_handler import SakeHandler
-from value_converter import ValueConverter
-from uuids import UUID
+from utils.log_manager import LogManager
+from ble.sake import SakeHandler
+from utils.value_converter import ValueConverter
+from utils.uuids import UUID
 
-from socp_opcodes import SocpOpCode
-from sensor_details import SensorDetails
+from cgm.opcodes import SocpOpCode
+from cgm.sensor_details import SensorDetails
 
 
 class SocpController():

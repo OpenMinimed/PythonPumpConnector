@@ -4,9 +4,9 @@ from bluezero.central import Central
 import threading
 import time
 
-from log_manager import LogManager
-from sake_handler import SakeHandler
-from uuids import UUID
+from utils.log_manager import LogManager
+from ble.sake import SakeHandler
+from utils.uuids import UUID
 
 from idd.features.pump_features import PumpFeatures
 

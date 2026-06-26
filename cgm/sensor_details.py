@@ -1,11 +1,11 @@
 import logging
 
-from base_enum import BaseEnum
-from log_manager import LogManager
-from parse_utils import ParseUtils
-from value_converter import ValueConverter
+from utils.base_enum import BaseEnum
+from utils.log_manager import LogManager
+from utils.parse_utils import ParseUtils
+from utils.value_converter import ValueConverter
 
-from socp_opcodes import SocpOpCode
+from cgm.opcodes import SocpOpCode
 
 
 class SensorDetailsFlags(BaseEnum):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from utils import *
+from utils.os_utils import *
 add_submodule_to_path() # bit of hacking ;)
 
 import logging
@@ -14,12 +14,12 @@ from bluezero import adapter
 from bluezero.device import Device
 from bluezero.central import Central
 
-from log_manager import LogManager
+from utils.log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
 
-from pump_advertiser import PumpAdvertiser
-from peripheral_handler import PeripheralHandler, BleService, BleChar
-from sake_handler import SakeHandler
+from ble.advertiser import PumpAdvertiser
+from ble.peripheral import PeripheralHandler, BleService, BleChar
+from ble.sake import SakeHandler
 
 import datetime as dt
 import importlib
@@ -58,14 +58,14 @@ def initialize_components(pump):
 
     global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures
 
-    from sg_reader import SGReader
-    from socp import SocpController
-    from cgm_misc import CgmMiscData
-    from cm import CertificateManagement
-    from history_reader import HistoryReader
-    from hats import HATS
-    from device_info import DeviceInfo
-    from database_manager import DatabaseManager
+    from cgm.reader import SGReader
+    from cgm.controller import SocpController
+    from cgm.misc import CgmMiscData
+    from services.cm import CertificateManagement
+    from history.reader import HistoryReader
+    from services.hats import HATS
+    from device.info import DeviceInfo
+    from database.manager import DatabaseManager
     from idd.status.reader import IDDStatusReader
     from idd.features.reader import IDDFeaturesReader
 
@@ -116,14 +116,14 @@ def reload_modules():
     global actions, pump
 
     modules_to_reload = [
-        'sg_reader',
-        'socp',
-        'cgm_misc',
-        'cm',
-        'history_reader',
-        'hats',
-        'device_info',
-        'database_manager',
+        'cgm.reader',
+        'cgm.controller',
+        'cgm.misc',
+        'services.cm',
+        'history.reader',
+        'services.hats',
+        'device.info',
+        'database.manager',
         'idd.status.reader',
         'idd.features.reader',
     ]

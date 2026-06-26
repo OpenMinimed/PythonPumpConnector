@@ -1,4 +1,4 @@
-from log_manager import LogManager
+from utils.log_manager import LogManager
 import logging
 
 from bluezero import peripheral

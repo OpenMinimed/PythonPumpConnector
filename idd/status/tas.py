@@ -1,8 +1,8 @@
 import logging
 
-from log_manager import LogManager
-from parse_utils import ParseUtils
-from value_converter import ValueConverter
+from utils.log_manager import LogManager
+from utils.parse_utils import ParseUtils
+from utils.value_converter import ValueConverter
 
 from idd.status.tas_flags import *
 from idd.status.opcodes import IddStatusReaderOpCode

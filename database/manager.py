@@ -3,9 +3,9 @@ import os
 import logging
 from typing import List, Optional
 
-from history_data import HistoryData, HistoryEventType
-from log_manager import LogManager
-from history_reader import HistoryReader
+from history.data import HistoryData, HistoryEventType
+from utils.log_manager import LogManager
+from history.reader import HistoryReader
 
 
 class DatabaseManager:

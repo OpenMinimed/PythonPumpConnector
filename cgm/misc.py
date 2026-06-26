@@ -4,14 +4,14 @@ from bluezero.central import Central
 import time
 from datetime import datetime, timedelta, timezone
 
-from log_manager import LogManager
+from utils.log_manager import LogManager
 
-from parse_utils import ParseUtils
-from value_converter import ValueConverter
-from sake_handler import SakeHandler
-from uuids import UUID
+from utils.parse_utils import ParseUtils
+from utils.value_converter import ValueConverter
+from ble.sake import SakeHandler
+from utils.uuids import UUID
 
-from cgm_features import CGMFeatures
+from cgm.features import CGMFeatures
 
 
 class CgmStartTime():

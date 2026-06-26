@@ -6,8 +6,8 @@ import re
 from threading import Thread
 import subprocess
 
-from log_manager import LogManager
-from utils import exec
+from utils.log_manager import LogManager
+from utils.os_utils import exec
 
 from bluezero.device import Device
 

@@ -6,10 +6,10 @@ import time
 
 from enum import IntEnum
 
-from history_data import HistoryData
-from log_manager import LogManager
-from sake_handler import SakeHandler
-from uuids import UUID
+from history.data import HistoryData
+from utils.log_manager import LogManager
+from ble.sake import SakeHandler
+from utils.uuids import UUID
 
 
 class IddRacpOpCode(IntEnum):
