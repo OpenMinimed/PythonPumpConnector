@@ -1,4 +1,5 @@
 bluezero
 colorlog
 crc
+matplotlib
 psutil
