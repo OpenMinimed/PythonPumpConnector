@@ -41,9 +41,9 @@ class DBViewer:
         for record in self.records:
             if record.event_type == HistoryEventType.NGP_REFERENCE_TIME:
                 current_ref = record.event_data.date_time
-                record._HistoryData__abs_time = current_ref
+                record.abs_time = current_ref
             elif current_ref is not None and record.relative_offset is not None:
-                record._HistoryData__abs_time = current_ref + dt.timedelta(seconds=record.relative_offset)
+                record.abs_time = current_ref + dt.timedelta(seconds=record.relative_offset)
 
     def print_summary(self):
         types = []
@@ -59,36 +59,38 @@ class DBViewer:
         return
 
     def plot_daily_counts(self, output_path="history_graph.png"):
-        dates = []
+        weeks = []
         for record in self.records:
-            abs_time = record._HistoryData__abs_time
+            abs_time = record.abs_time
             if abs_time is not None:
-                dates.append(abs_time.date())
+                iso = abs_time.isocalendar()
+                weeks.append((iso[0], iso[1]))
 
-        if not dates:
+        if not weeks:
             logging.warning("No records with absolute times to plot")
             return
 
-        counter = Counter(dates)
-        sorted_days = sorted(counter.items())
+        counter = Counter(weeks)
+        sorted_weeks = sorted(counter.items())
 
-        if not sorted_days:
+        if not sorted_weeks:
             logging.warning("No records with dates to plot")
             return
 
-        days = [d.strftime("%Y-%m-%d") for d, _ in sorted_days]
-        counts = [c for _, c in sorted_days]
+        labels = [f"{w[0]}-W{w[1]:02d}" for w, _ in sorted_weeks]
+        counts = [c for _, c in sorted_weeks]
 
         plt.figure(figsize=(12, 6))
-        plt.bar(days, counts)
-        plt.xlabel("Date")
+        plt.bar(range(len(labels)), counts)
+        plt.xlabel("Week")
         plt.ylabel("Number of datapoints")
-        plt.title("Daily History Record Counts")
-        plt.xticks(rotation=45, ha="right")
+        plt.title("Weekly History Record Counts")
+        plt.xticks(range(len(labels)), labels, rotation=45, ha="right")
         plt.tight_layout()
-        plt.savefig(os.path.join(os.path.dirname(__file__), output_path))
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), output_path))
+        plt.savefig(output_path)
         plt.close()
-        print(f"Daily counts graph saved to {output_path}")
+        print(f"Weekly counts graph saved to {output_path}")
 
     def query_gaps(self):
         conn = sqlite3.connect(self.db_path)
@@ -123,9 +125,7 @@ class DBViewer:
 
 
 if __name__ == "__main__":
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
     from utils.os_utils import add_submodule_to_path
     add_submodule_to_path()
 

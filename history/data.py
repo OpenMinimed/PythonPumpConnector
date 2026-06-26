@@ -1138,7 +1138,7 @@ class HistoryData:
         self.relative_offset: int | None = None # in seconds
         self.event_data: HistoryEventData | None = None
 
-        self.__abs_time: dt.datetime | None = None
+        self.abs_time: dt.datetime | None = None
 
     def parse(self, ref_time: dt.datetime | None = None) -> bool:
         # minimal length is the size of the mandatory fields plus, optionally,
@@ -1179,7 +1179,7 @@ class HistoryData:
         # DEBUG: translate relative time to absolute time if a reference was
         #        provided
         if ref_time is not None:
-            self.__abs_time = ref_time + dt.timedelta(seconds=self.relative_offset)
+            self.abs_time = ref_time + dt.timedelta(seconds=self.relative_offset)
 
         try:
             self.event_type = HistoryEventType(event_type_int)
@@ -1203,7 +1203,7 @@ class HistoryData:
         return True
 
     def __str__(self):
-        t = "" if self.__abs_time is None else f" -> {self.__abs_time}"
+        t = "" if self.abs_time is None else f" -> {self.abs_time}"
 
         event_data = str(self.event_data).splitlines()
         event_data = "\n    ".join(event_data)
