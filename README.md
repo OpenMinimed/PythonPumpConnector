@@ -51,11 +51,11 @@ This script lets you connect to a 700-series Medtronic pump from a Linux compute
 
     Consult your distribution's guide or fetch the [upstream sources](https://github.com/bluez/bluez/tree/5.66).
 
-5. Patch and rebuild BlueZ — force ATT_MTU to 23 bytes
+5. Patch and rebuild BlueZ — force ATT_MTU size to 23 bytes
 
     In `src/shared/gatt-server.c`, find `find_info_cb()` and the call to `encode_find_info_rsp()`. Insert `mtu = 23;` right before that call. Rebuild and reinstall BlueZ.
 
-    **Why:** After the pump connects, BlueZ requests an MTU of 184 bytes (the pump's advertised max). The pump does not actually handle PDUs larger than 23 bytes — it stops responding, terminating the connection. The MiniMed Mobile app never sends larger PDUs even after an MTU exchange. Patching `find_info_cb()` is the only reliable fix (`ExchangeMTU = 23` in `main.conf` does not work).
+    **Why:** After the pump connects, BlueZ automatically increases the MTU size to 184 bytes (the pump's advertised max). The pump, however, does not actually handle MTUs larger than 23 bytes during GATT discovery — it stops responding, terminating the connection. Patching `find_info_cb()` is the only reliable fix so far (`ExchangeMTU = 23` in `main.conf` does not seem to work and would also limit the size for _all_ of the packets; which is not what we want).
 
     Tested and working on BlueZ 5.55 and 5.66, Linux 6.1.0-42-amd64.
 
