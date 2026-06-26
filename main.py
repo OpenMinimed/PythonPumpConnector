@@ -25,8 +25,6 @@ import datetime as dt
 import importlib
 import sys
 
-DUMP_COUNT = 1000
-
 pa:PumpAdvertiser = None
 sh:SakeHandler = None
 device:Device = None
@@ -168,17 +166,6 @@ def print_help():
         print(f"  {k}: {desc}")
     return
 
-def save_history():
-    filename = dt.datetime.now().strftime("%Y-%m-%d__%H-%M-%S_history_data.txt")
-
-    # get history data from pump
-    records = hr.get_last_n_records(DUMP_COUNT)
-
-    # write data to file as hexstring
-    with open(filename, "w") as f:
-        for r in records:
-            f.write(r.raw_data.hex() + "\n")
-
 def setup_actions():
     global actions
 
@@ -198,7 +185,6 @@ def setup_actions():
         ('Read IDD History - last record',     lambda: hr.get_last_record()),
         ('Read IDD History - first record',    lambda: hr.get_first_record()),
         ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
-        #(f'Save IDD history of {DUMP_COUNT} records to a file', lambda: save_history()),
         ('Sync all history data to the database (may take several minutes!)', lambda: dbm.sync()),
         ('Read device info', lambda: devinf.get_device_info()),
 
@@ -287,9 +273,6 @@ def main():
         help='Reconnect to an already paired pump')
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
-    #parser.add_argument('--no-adv-interval-hack',
-    #    action='store_true', default=False,
-    #    help='Do not use the software hack to shorten the advertising interval on reconnects')
     args = parser.parse_args()
 
     if args.reconnect and not args.adv_name:
