@@ -7,8 +7,7 @@ from history.data import HistoryData
 from utils.log_manager import LogManager
 from history.reader import HistoryReader
 
-DB_PATH = "history.db"
-
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "history.db"))
 
 class DatabaseManager:
     

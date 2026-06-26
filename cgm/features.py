@@ -121,7 +121,7 @@ class CGMFeatures:
 
         return "\n    ".join([
             f"{self.__class__.__name__}(",
-            f"Feature:         "
+            f"Features:         "
                 + ("--" if self.feature is None else f"\n{' '*8}".join(flags)),
             f"Type:            "
                 + ("--" if self.type is None else self.type.name),
