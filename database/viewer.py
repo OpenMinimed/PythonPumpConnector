@@ -13,7 +13,6 @@ class DBViewer:
     def __init__(self, db_path=DB_PATH):
         self.db_path = db_path
         self.records: list[HistoryData] = []
-        self.ref_time: dt.datetime | None = None
 
     def load_records(self):
         conn = sqlite3.connect(self.db_path)
@@ -32,14 +31,16 @@ class DBViewer:
             if record.parse():
                 self.records.append(record)
 
+        self._compute_abs_times()
+
+    def _compute_abs_times(self):
+        current_ref = None
         for record in self.records:
             if record.event_type == HistoryEventType.NGP_REFERENCE_TIME:
-                self.ref_time = record.event_data.date_time
-                break
-
-        if self.ref_time:
-            for record in self.records:
-                record.parse(self.ref_time)
+                current_ref = record.event_data.date_time
+                record._HistoryData__abs_time = current_ref
+            elif current_ref is not None and record.relative_offset is not None:
+                record._HistoryData__abs_time = current_ref + dt.timedelta(seconds=record.relative_offset)
 
     def print_summary(self):
         types = []
@@ -54,14 +55,15 @@ class DBViewer:
             print(f"  {t}")
 
     def plot_daily_counts(self, output_path="history_graph.png"):
-        if not self.ref_time:
-            logging.warning("No reference time found, cannot plot daily counts")
-            return
-
         dates = []
         for record in self.records:
-            abs_time = self.ref_time + dt.timedelta(seconds=record.relative_offset)
-            dates.append(abs_time.date())
+            abs_time = record._HistoryData__abs_time
+            if abs_time is not None:
+                dates.append(abs_time.date())
+
+        if not dates:
+            logging.warning("No records with absolute times to plot")
+            return
 
         counter = Counter(dates)
         sorted_days = sorted(counter.items())
@@ -119,6 +121,9 @@ class DBViewer:
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from utils.os_utils import add_submodule_to_path
     add_submodule_to_path()
 
