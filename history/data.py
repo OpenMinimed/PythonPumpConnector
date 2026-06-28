@@ -44,6 +44,7 @@ class HistoryData:
     """
 
     event_data_handlers = {
+        #HistoryEventType.REFERENCE_TIME:
         HistoryEventType.BOLUS_PROGRAMMED_P1:          BolusProgrammedP1Data,
         HistoryEventType.BOLUS_PROGRAMMED_P2:          BolusProgrammedP2Data,
         HistoryEventType.BOLUS_DELIVERED_P1:           BolusDeliveredP1Data,
@@ -86,6 +87,8 @@ class HistoryData:
         self.abs_time: dt.datetime | None = None
 
     def parse(self, ref_time: dt.datetime | None = None) -> bool:
+        # minimal length is the size of the mandatory fields plus, optionally,
+        # 3 bytes for the E2E-Counter and E2E-CRC
         min_length = 11 if self.use_e2e else 8
 
         data = self.raw_data
@@ -98,19 +101,29 @@ class HistoryData:
 
         if self.use_e2e:
 
+            # validate E2E-CRC
+            #
+            # TODO: Actually test this! This was not yet tested since the pump
+            #       never uses E2E-Protection in this service.
             if not ValueConverter.check_crc(data):
                 self.logger.error("E2E-CRC mismatch")
                 return False
 
+            # snip crc
             data = data[:-2]
 
+            # snip E2E-Counter from record (we had to keep it until now
+            # because it must be included in the CRC)
             data = data[:-1]
 
+        # mandatory fields
         event_type_int,       data = ParseUtils.consume_u16(data)
         self.sequence_number, data = ParseUtils.consume_u32(data)
         self.relative_offset, data = ParseUtils.consume_u16(data)
         event_data_raw,       data = data, bytes([])
 
+        # DEBUG: translate relative time to absolute time if a reference was
+        #        provided
         if ref_time is not None:
             self.abs_time = ref_time + dt.timedelta(seconds=self.relative_offset)
 
@@ -119,6 +132,7 @@ class HistoryData:
         except ValueError:
             self.event_type = HistoryEventType.UNDEFINED
 
+        # parse event data
         event_data = self.event_data_handlers.get(event_type_int, UnknownEventData)(event_data_raw)
         if not event_data.parse():
             self.logger.error(f"Failed to parse event data (type 0x{event_type_int:04x}): " + event_data_raw.hex())
@@ -126,6 +140,7 @@ class HistoryData:
 
         self.event_data = event_data
 
+        # we are done, there must not be any data left in the record
         if len(data) > 0:
             self.logger.error("Extra data in record: %d byte(s) left, should be 0"
                 % len(data))

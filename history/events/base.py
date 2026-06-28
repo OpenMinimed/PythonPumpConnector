@@ -14,6 +14,7 @@ class HistoryEventData:
         if not success:
             return False
 
+        # we are done parsing, there must not be any data left
         if len(data) > 0:
             self.logger.error("Extra event data after parsing: "
                 + "%d byte(s) left, should be 0"  % len(data))
@@ -22,6 +23,7 @@ class HistoryEventData:
         return True
 
     def _parse_impl(self, data) -> tuple[bool, bytes]:
+        # implementation goes only into the child classes
         return False, data
 
     @staticmethod

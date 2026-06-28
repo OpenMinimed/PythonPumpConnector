@@ -6,6 +6,7 @@ from history.events.base import HistoryEventData
 
 
 class DeliveredBasalRateChangedData(HistoryEventData):
+    """Event data for the Delivered Basal Rate Changed event"""
     class Flag(BaseEnum):
         BASAL_DELIVERY_CONTEXT_PRESENT = 1<<0
 
@@ -42,6 +43,7 @@ class DeliveredBasalRateChangedData(HistoryEventData):
 
 
 class MaxBolusAmountChangedData(HistoryEventData):
+    """Event data for the Max Bolus Amount Changed Data event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -63,6 +65,7 @@ class MaxBolusAmountChangedData(HistoryEventData):
 
 
 class MicroBolusData(HistoryEventData):
+    """Event data for the Auto Basal Delivery event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -84,6 +87,7 @@ class MicroBolusData(HistoryEventData):
 
 
 class MaxAutoBasalRateChangedData(HistoryEventData):
+    """Event data for the Max Auto Basal Rate Changed event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -105,6 +109,7 @@ class MaxAutoBasalRateChangedData(HistoryEventData):
 
 
 class TherapyContextData(HistoryEventData):
+    """Event data for the Therapy Context event"""
     class Flag(BaseEnum):
         SENSOR_ENABLED           = 1<<0
         BASAL_RATE_ACTIVE        = 1<<1

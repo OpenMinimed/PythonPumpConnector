@@ -5,6 +5,7 @@ from history.events.base import HistoryEventData
 
 
 class SGMeasurementData(HistoryEventData):
+    """Event data for the SG Measurement event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -22,6 +23,7 @@ class SGMeasurementData(HistoryEventData):
         return True, data
 
     def __str__(self):
+        # handle special SG values
         sg = self.sg_value
         if sg == 0x0301:
             sg = "no value, sensor starting"
@@ -44,6 +46,7 @@ class SGMeasurementData(HistoryEventData):
 
 
 class CGMAnalyticsData(HistoryEventData):
+    """Event data for the CGM Analytics event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -68,6 +71,7 @@ class CGMAnalyticsData(HistoryEventData):
 
 
 class BgReadingData(HistoryEventData):
+    """Event data for the BG Reading event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -91,6 +95,7 @@ class BgReadingData(HistoryEventData):
 
 
 class CalibrationData(HistoryEventData):
+    """Event data for the Calibration Complete and the Calibration Rejected events"""
     def __init__(self, data: bytes):
         super().__init__(data)
 

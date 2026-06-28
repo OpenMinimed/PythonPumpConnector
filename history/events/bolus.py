@@ -6,6 +6,7 @@ from history.events.base import HistoryEventData
 
 
 class BolusProgrammedP1Data(HistoryEventData):
+    """Event data for the Bolus Programmed Part 1 of 2 event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -38,6 +39,7 @@ class BolusProgrammedP1Data(HistoryEventData):
 
 
 class BolusProgrammedP2Data(HistoryEventData):
+    """Event data for the Bolus Programmed Part 2 of 2 event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -77,6 +79,7 @@ class BolusProgrammedP2Data(HistoryEventData):
 
 
 class BolusDeliveredP1Data(HistoryEventData):
+    """Event data for the Bolus Delivered Part 1 of 2 event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -109,6 +112,7 @@ class BolusDeliveredP1Data(HistoryEventData):
 
 
 class BolusDeliveredP2Data(HistoryEventData):
+    """Event data for the Bolus Delivered Part 2 of 2 event"""
     class Flag(BaseEnum):
         BOLUS_ACTIVATION_TYPE_PRESENT    = 1<<0
         BOLUS_END_REASON_PRESENT         = 1<<1

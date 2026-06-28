@@ -12,6 +12,7 @@ from history.events.base import HistoryEventData
 
 
 class CL1TransitionData(HistoryEventData):
+    """Event data for the CL1 Transition event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -32,6 +33,7 @@ class CL1TransitionData(HistoryEventData):
 
 
 class InsulinDeliveryStoppedData(HistoryEventData):
+    """Event data for the Insulin Delivery Stopped event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -52,6 +54,7 @@ class InsulinDeliveryStoppedData(HistoryEventData):
 
 
 class InsulinDeliveryRestartedData(HistoryEventData):
+    """Event data for the Insulin Delivery Restarted event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -72,6 +75,7 @@ class InsulinDeliveryRestartedData(HistoryEventData):
 
 
 class MealData(HistoryEventData):
+    """Event data for the Meal event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -90,6 +94,7 @@ class MealData(HistoryEventData):
 
 
 class NGPReferenceTimeData(HistoryEventData):
+    """Event data for the NGP Reference Time event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 

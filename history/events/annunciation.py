@@ -7,6 +7,7 @@ from history.events.base import HistoryEventData
 
 
 class AnnunciationClearedData(HistoryEventData):
+    """Event data for the Annunciation Cleared event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -20,6 +21,7 @@ class AnnunciationClearedData(HistoryEventData):
         return True, data
 
     def __str__(self):
+        # show fault type as name if we have it in our list
         if AnnunciationType.contains_value(self.fault_type):
             t = AnnunciationType(self.fault_type).name
         else:
@@ -33,6 +35,7 @@ class AnnunciationClearedData(HistoryEventData):
 
 
 class AnnunciationData(HistoryEventData):
+    """Event data for the Annunciation Consolidated event"""
     def __init__(self, data: bytes):
         super().__init__(data)
 
@@ -56,14 +59,38 @@ class AnnunciationData(HistoryEventData):
 
         self.annunciation_type = annunciation_type & 0x0fff
         if self.annunciation_type == 0:
+            # TODO: assign a dummy AnnunciationType?
             return True, data
+
+        # NOTE: There are so many possible annunciation types (potentially one
+        #       for every alert the pump can display) that it seems better, for
+        #       now, to just go with the raw number value here instead of
+        #       converting to AnnunciationType and demanding that we have that
+        #       particular value listed and named in there already.
+        #assert AnnunciationType.contains_value(self.annunciation_type)
+        #self.annunciation_type = AnnunciationType(self.annunciation_type)
 
         assert PumpAnnunciationStatus.contains_value(annunciation_status)
         self.annunciation_status = PumpAnnunciationStatus(annunciation_status)
 
+        # seconds since 2000-01-01 00:00:00.000
         ref = dt.datetime(2000, 1, 1, 0, 0, 0, 0)
         self.timestamp = ref + dt.timedelta(seconds=timestamp)
 
+        # NOTE: We ignore the AUXINFOx_PRESENT flags and just parse the
+        #       auxiliary data by annunciation type, i.e. the number of
+        #       expected bytes in that package depends on the type. It is not
+        #       clear anyway why Medtronic shoehorned their data into the
+        #       structure defined by the spec for the IDD Annunciation Status.
+        #       They changed it already, by adding a 6th AuxInfo field and
+        #       associated flag. Why not go fully custom then?
+        #
+        #       We just assert the presence of the appropriate AUXINFOx_PRESENT
+        #       flags to have an additional sanity check.
+
+        # The timestamp populates the first two AuxInfo fields. Since the
+        # timestamp seems to be mandatory in Medtronic's annunciations, these
+        # two flags should always be set.
         assert self.event_flags & AnnunciationEventFlag.AUXINFO1_PRESENT
         assert self.event_flags & AnnunciationEventFlag.AUXINFO2_PRESENT
 
@@ -82,6 +109,7 @@ class AnnunciationData(HistoryEventData):
         ]:
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
             assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is mg/dL (?)
             d["sg_value"],                data = ParseUtils.consume_f16(data)
             d["contextual_time_minutes"], data = ParseUtils.consume_u8(data)
             d["contextual_time_hours"],   data = ParseUtils.consume_u8(data)
@@ -92,12 +120,14 @@ class AnnunciationData(HistoryEventData):
             AnnunciationType.HIGH_SENSOR_GLUECOSE2,
         ]:
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
+            # unit is mg/dL (?)
             d["sg_value"], data = ParseUtils.consume_f16(data)
         elif self.annunciation_type in [
             AnnunciationType.LOW_RESERVOIR_ALERT,
         ]:
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
             assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is IU (?)
             d["units_remaining"], data = ParseUtils.consume_f32(data)
         elif self.annunciation_type in [
             AnnunciationType.BOLUS_STOPPED,
@@ -106,7 +136,9 @@ class AnnunciationData(HistoryEventData):
             assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
             assert self.event_flags & AnnunciationEventFlag.AUXINFO5_PRESENT
             assert self.event_flags & AnnunciationEventFlag.AUXINFO6_PRESENT
+            # unit is IU (?)
             d["units_programmed"], data = ParseUtils.consume_f32(data)
+            # unit is IU (?)
             d["units_delivered"],  data = ParseUtils.consume_f32(data)
         elif self.annunciation_type in [
             AnnunciationType.MAX_FIL_REACHED,
@@ -114,6 +146,7 @@ class AnnunciationData(HistoryEventData):
         ]:
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
             assert self.event_flags & AnnunciationEventFlag.AUXINFO4_PRESENT
+            # unit is IU (?)
             d["units_delivered"],  data = ParseUtils.consume_f32(data)
         elif self.annunciation_type in [
             AnnunciationType.CL1_EXIT_HIGH_SG,
@@ -186,6 +219,8 @@ class AnnunciationData(HistoryEventData):
         elif self.annunciation_type in [
             AnnunciationType.LOW_RESERVOIR_ALERT_2,
         ]:
+            # NOTE: order of minutes and hours switched, compared to other
+            #       annunciations
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
             d["low_reservoir_time_remaining_hours"],   data = ParseUtils.consume_u8(data)
             d["low_reservoir_time_remaining_minutes"], data = ParseUtils.consume_u8(data)
@@ -211,6 +246,8 @@ class AnnunciationData(HistoryEventData):
             d["iob_partial_status_remaining_minutes"], data = ParseUtils.consume_u8(data)
             d["iob_partial_status_remaining_hours"],   data = ParseUtils.consume_u8(data)
         else:
+            # we assume that other annunciation types do not have any
+            # auxiliary data
             pass
 
         self.auxiliary_data = d
@@ -218,6 +255,7 @@ class AnnunciationData(HistoryEventData):
         return True, data
 
     def __str__(self):
+        # show annunciation type as name if we have it in our list
         if AnnunciationType.contains_value(self.annunciation_type):
             t = AnnunciationType(self.annunciation_type).name
         else:
