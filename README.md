@@ -86,7 +86,7 @@ This script lets you connect to a 700-series Medtronic pump from a Linux compute
 
 ## How to use
 
-The pump communicates over BLE, so you need a computer with Bluetooth LE support.
+The pump communicates over Bluetooth Low Energy (BLE), so you need a computer with support for that.
 
 ### Pairing
 
@@ -134,7 +134,7 @@ If the script was stopped after a successful SAKE handshake, reconnect without r
 ./main.py --reconnect
 ```
 
-The name used during pairing need not be supplied here again. The second terminal with `bluetoothctl` is not needed for reconnects.
+The name used during pairing need not be supplied here again. The second terminal with `bluetoothctl` is not needed either.
 
 ### Database viewer
 
@@ -159,7 +159,7 @@ btmon -w $(date +"%Y-%m-%d_%T")_pump.log
 
 Run this in a separate terminal before starting `main.py`.
 
-Sometimes no BLE traffic is sent and pairing does not start — likely a GUI bug in the pump. Go back to `Paired Devices > Pair New Device` and retry. Disabling the BT adapter on the PC while the pump waits on a timeout regains button control faster.
+Sometimes no BLE traffic is sent and pairing does not start — likely a GUI bug in the pump. Go back to `Paired Devices > Pair New Device` and retry. Disabling the Bluetooth adapter on the PC while the pump waits on a timeout regains button control faster.
 
 ## Advanced
 
@@ -188,7 +188,7 @@ cat /sys/kernel/security/lockdown
 
 If not `none`, disable Secure Boot in BIOS/EFI.
 
-Verify with `btmon` — you should see:
+Verify with `btmon` — you should see the following during advertising:
 
 ```
 Min advertising interval: 31.250 msec (0x0032)
