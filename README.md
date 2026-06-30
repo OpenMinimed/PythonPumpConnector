@@ -67,6 +67,8 @@ This script lets you connect to a 700-series Medtronic pump from a Linux compute
     sudo systemctl restart bluetoothd
     ```
 
+    **Why:** The pump only reconnects to devices that are using a Resolvable Private Address (RPA). This setting makes our computer use that instead of its actual Bluetooth MAC address. The initial pairing also works without it though.
+
 7. Patch bluezero (tested with v0.9.1 only)
 
     Find the bluezero install location (`pip show bluezero`). Open `bluezero/localGATT.py`, class `Characteristic`, function `WriteValue()`. Comment out the call to `self.Set()`:
