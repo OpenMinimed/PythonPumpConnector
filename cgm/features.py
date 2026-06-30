@@ -85,7 +85,7 @@ class CGMFeatures:
         #       or not is part of this very characteristic, the spec defines a
         #       workaround: The CRC field is always included in this packet. If
         #       E2E-safety is not supported, the CRC field is set to 0xffff.
-        if data[:-2] != bytes([0xff,0xff]):
+        if data[-2:] != bytes([0xff,0xff]):
             if not ValueConverter.check_crc(data):
                 self.logger.error("E2E-CRC mismatch")
                 return False
