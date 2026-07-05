@@ -40,6 +40,7 @@ hatss = None
 devinf = None
 iddstatus = None
 iddfeatures = None
+idbattery = None
 
 # Actions dict
 actions = {}
@@ -54,7 +55,7 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures, iddbattery
 
     from cgm.reader import SGReader
     from cgm.controller import SocpController
@@ -64,6 +65,7 @@ def initialize_components(pump):
     from services.hats import HATS
     from device.info import DeviceInfo
     from database.manager import DatabaseManager
+    from idd.gst_battery import GSTBatteryLevel
     from idd.status.reader import IDDStatusReader
     from idd.features.reader import IDDFeaturesReader
 
@@ -85,6 +87,8 @@ def initialize_components(pump):
     logging.info("IDDStatusReader created")
     iddfeatures = IDDFeaturesReader(pump)
     logging.info("IDDFeaturesReader created")
+    iddbattery = GSTBatteryLevel(pump)
+    logging.info("GSTBatteryLevel created")
 
     # special one that uses 'hr' instead of 'pump'
     dbm = DatabaseManager(hr)
@@ -95,7 +99,7 @@ def initialize_components(pump):
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus, iddfeatures
+    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus, iddfeatures, iddbattery
 
     sgr.unsubscribe()
     socpc.unsubscribe()
@@ -106,6 +110,7 @@ def unsubscribe_components():
     devinf.unsubscribe()
     iddstatus.unsubscribe()
     iddfeatures.unsubscribe()
+    iddbattery.unsubscribe()
 
     return
 
@@ -124,6 +129,7 @@ def reload_modules():
         'database.manager',
         'idd.status.reader',
         'idd.features.reader',
+        'idd.gst_battery',
     ]
 
     # We have to unsubscribe from the component's characteristic
@@ -195,6 +201,7 @@ def setup_actions():
         ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
         ('Read IDD status - Get Active Basal Rate Delivery', lambda: iddstatus.get_active_basal_rate_delivery()),
         ('Read IDD status - Pump Status',             lambda: iddstatus.get_pump_status()),
+        ('Read IDD GST Battery Level',                lambda: iddbattery.get_value()),
 
         ('IDD status test all calls', lambda: iddstatus.test_all()),
     ]
