@@ -31,6 +31,7 @@ class DBViewer:
         for event_type, seq_number, relative_offset, raw_hex in tqdm(rows):
             raw_data = bytes.fromhex(raw_hex)
             record = HistoryData(raw_data, use_e2e=False)
+            record.abs_time = None
             if record.parse():
                 self.records.append(record)
 
