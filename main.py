@@ -270,6 +270,20 @@ def main():
 
     global ph, pa, sh, device
 
+    # Fix bluezero's log messages showing up twice
+    #
+    # Since we are using the root logger in our LogManager, everything we do
+    # with it affects *all* loggers. And since propagation of log events to
+    # the parent loggers is enabled by default, bluezero's log messages shows
+    # up in their logger as well as in ours.
+    #
+    # We could choose to disable propagation and just use their log output. Or
+    # we could disable their handlers and have bluezero's log messages show up
+    # in our logger only. The latter is what we are doing here.
+    bluezero_logger = logging.getLogger("bluezero.localGATT")
+    for h in bluezero_logger.handlers:
+        bluezero_logger.removeHandler(h)
+
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
     parser.add_argument('adv_name',
