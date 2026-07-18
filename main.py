@@ -280,9 +280,12 @@ def main():
     # We could choose to disable propagation and just use their log output. Or
     # we could disable their handlers and have bluezero's log messages show up
     # in our logger only. The latter is what we are doing here.
-    bluezero_logger = logging.getLogger("bluezero.localGATT")
-    for h in bluezero_logger.handlers:
-        bluezero_logger.removeHandler(h)
+    for logger_name in logging.root.manager.loggerDict:
+        if logger_name.startswith("bluezero."):
+            logging.info(f"Removing handlers for logger {logger_name}")
+            bluezero_logger = logging.getLogger(logger_name)
+            for h in bluezero_logger.handlers:
+                bluezero_logger.removeHandler(h)
 
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
