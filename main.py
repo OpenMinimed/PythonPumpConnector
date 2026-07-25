@@ -55,7 +55,17 @@ actions = {}
 
 def initialize_components(pump):
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, dbm, iddstatus, iddfeatures, iddbattery
+    global sgr
+    global socpc
+    global cgmm
+    global certman
+    global hr
+    global hatss
+    global devinf
+    global dbm
+    global iddstatus
+    global iddfeatures
+    global iddbattery
 
     from cgm.reader import SGReader
     from cgm.controller import SocpController
@@ -99,7 +109,16 @@ def initialize_components(pump):
 
 def unsubscribe_components():
 
-    global sgr, socpc, cgmm, certman, hr, hatss, devinf, iddstatus, iddfeatures, iddbattery
+    global sgr
+    global socpc
+    global cgmm
+    global certman
+    global hr
+    global hatss
+    global devinf
+    global iddstatus
+    global iddfeatures
+    global iddbattery
 
     sgr.unsubscribe()
     socpc.unsubscribe()
@@ -116,7 +135,8 @@ def unsubscribe_components():
 
 def reload_modules():
 
-    global actions, pump
+    global actions
+    global pump
 
     modules_to_reload = [
         'cgm.reader',
@@ -235,7 +255,12 @@ def main_input_loop():
             print(f"Unknown key: {key}. Press 'h' for help.")
 
 def main_logic():
-    global sgr, socpc, cgmm, certman, hr, pump
+    global sgr
+    global socpc
+    global cgmm
+    global certman
+    global hr
+    global pump
 
     initialized = False
 
@@ -268,7 +293,10 @@ def main_logic():
 
 def main():
 
-    global ph, pa, sh, device
+    global ph
+    global pa
+    global sh
+    global device
 
     # Fix bluezero's log messages showing up twice
     #
