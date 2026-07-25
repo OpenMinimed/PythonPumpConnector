@@ -1,7 +1,6 @@
 from enum import StrEnum
 
 class UUID(StrEnum):
-    
     # Continuous Glucose Measurement Service
     CGM_SERVICE                 = "0000181f-0000-1000-8000-00805f9b34fb"
     CGM_MEASUREMENT_CHAR        = "00002aa7-0000-1000-8000-00805f9b34fb"
@@ -32,11 +31,11 @@ class UUID(StrEnum):
     IDD_GST_BATTERY_LEVEL_CHAR  = "00000400-0000-1000-0000-009132591325"
     IDD_RACP_CHAR               = "00002a52-0000-1000-8000-00805f9b34fb"
 
-    # Battery Service characteristics
-    BATT_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb"
-    BATT_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb"
+    # Battery Service
+    BATT_SERVICE                = "0000180f-0000-1000-8000-00805f9b34fb"
+    BATT_LEVEL_CHAR             = "00002a19-0000-1000-8000-00805f9b34fb"
 
-    # Device Information Service characteristics
+    # Device Information Service
     DIS_SERVICE                 = "0000180a-0000-1000-8000-00805f9b34fb"
     DIS_MAN_NAME_CHAR           = "00002a29-0000-1000-8000-00805f9b34fb"
     DIS_MODEL_NO_CHAR           = "00002a24-0000-1000-8000-00805f9b34fb"
@@ -47,3 +46,4 @@ class UUID(StrEnum):
     DIS_SYS_ID_CHAR             = "00002a23-0000-1000-8000-00805f9b34fb"
     DIS_IEEE_CERT_CHAR          = "00002a2a-0000-1000-8000-00805f9b34fb"
     DIS_PNP_ID_CHAR             = "00002a50-0000-1000-8000-00805f9b34fb"
+

@@ -75,7 +75,7 @@ class DeviceInfo():
         for c in self.info_chars:
             c.add_characteristic_cb(self._generic_cb)
 
-        self.batt_char = self.__add_char(UUID.BATT_SERVICE, UUID.BATT_LEVEL, flags)
+        self.batt_char = self.__add_char(UUID.BATT_SERVICE, UUID.BATT_LEVEL_CHAR, flags)
         self.batt_char.add_characteristic_cb(self._batt_cb)
         
         return
