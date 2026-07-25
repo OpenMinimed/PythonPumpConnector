@@ -319,7 +319,7 @@ def main():
     parser = argparse.ArgumentParser(description="Python Pump Connector")
     parser.add_argument('adv_name',
         nargs='?',
-        help='Name to use for advertising. 0–7 characters. Will be chosen randomly if not supplied.')
+        help='Name to use for advertising. 0–7 ASCII characters. Will be chosen randomly if not supplied.')
     parser.add_argument('-r', '--reconnect',
         action='store_true',
         help='Reconnect to an already paired pump')
