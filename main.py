@@ -346,28 +346,23 @@ def main():
     ph.set_on_connect(on_connect)
     ph.set_on_disconnect(pa.on_disconnect_cb)
 
-    # create the services
-    service_info_serv = BleService("00000900-0000-1000-0000-009132591325", "Device Info")
+    # device info service
+    dev_info_serv = BleService("00000900-0000-1000-0000-009132591325", "Device Info")
+    ph.add_service(dev_info_serv)
+    ph.add_char(dev_info_serv, BleChar("2A29", "Manufacturer Name",       "Google"))
+    ph.add_char(dev_info_serv, BleChar("2A24", "Model Number",            "Nexus 5x"))
+    ph.add_char(dev_info_serv, BleChar("2A25", "Serial Number",           "12345678"))
+    ph.add_char(dev_info_serv, BleChar("2A27", "Hardware Revision",       "HW 1.0"))
+    ph.add_char(dev_info_serv, BleChar("2A26", "Firmware Revision",       "FW 1.0"))
+    ph.add_char(dev_info_serv, BleChar("2A28", "Software Revision",       "1.0.0"))
+    ph.add_char(dev_info_serv, BleChar("2A23", "System ID",               bytes(8)))
+    ph.add_char(dev_info_serv, BleChar("2A50", "PNP ID",                  bytes(7)))
+    ph.add_char(dev_info_serv, BleChar("2A2A", "Certification Data List", bytes(0)))
+
+    # SAKE service
     sake_serv = BleService("FE82", "Sake Service")
-    ph.add_service(service_info_serv)
-    ph.add_service(sake_serv)
-
-    # create the characteristics
-    mn = BleChar("2A29", "Manufacturer Name", "Google")
-    mn_model = BleChar("2A24", "Model Number", "Nexus 5x")
-    sn = BleChar("2A25", "Serial Number", "12345678")
-    hw_rev = BleChar("2A27", "Hardware Revision", "HW 1.0")
-    fw_rev = BleChar("2A26", "Firmware Revision", "FW 1.0")
-    sw_rev = BleChar("2A28", "Software Revision", "2.9.0 f1093d1") # actual application version with commit hash
-    system_id = BleChar("2A23", "System ID", bytes(8))
-    pnp_id = BleChar("2A50", "PNP ID", bytes(7))
-    cert_data = BleChar("2A2A", "Certification Data List", bytes(0))
     sake_port = BleChar("0000FE82-0000-1000-0000-009132591325", "Sake Port", None, sh.notify_callback, sh.write_callback)
-
-
-    # add all chars
-    for char in [mn, mn_model, sn, hw_rev, fw_rev, sw_rev, system_id, pnp_id, cert_data]:
-        ph.add_char(service_info_serv, char)
+    ph.add_service(sake_serv)
     ph.add_char(sake_serv, sake_port)
 
     # finally before calling bluezero, start our advertisement and main logic thread
