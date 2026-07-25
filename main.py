@@ -302,7 +302,7 @@ def main():
     #
     # Since we are using the root logger in our LogManager, everything we do
     # with it affects *all* loggers. And since propagation of log events to
-    # the parent loggers is enabled by default, bluezero's log messages shows
+    # the parent loggers is enabled by default, bluezero's log messages show
     # up in their logger as well as in ours.
     #
     # We could choose to disable propagation and just use their log output. Or
