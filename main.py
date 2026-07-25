@@ -30,127 +30,68 @@ sh:SakeHandler = None
 device:Device = None
 pump = None
 
-# Component instances
-sgr = None
-socpc = None
-cgmm = None
-certman = None
-hr = None
-hatss = None
-devinf = None
-iddstatus = None
-iddfeatures = None
-idbattery = None
+# container for component instances
+components = None
 
 # Actions dict
 actions = {}
 
-# HOW TO ADD A NEW MODULE:
-# 1. Add global variable declaration at module level (e.g., new_component = None)
-# 2. Add import in initialize_components() function
-# 3. Instantiate in initialize_components() function
-# 4. Add module name to modules_to_reload list in reload_modules()
-# 5. Add unsubscribe call in unsubscribe_components()
-# 6. Add action in setup_actions() function
 
-def initialize_components(pump):
+class ReloadableComponents:
+    def __init__(self, pump):
+        self.logger = LogManager.get_logger(self.__class__.__name__)
+        self.pump = pump
 
-    global sgr
-    global socpc
-    global cgmm
-    global certman
-    global hr
-    global hatss
-    global devinf
-    global dbm
-    global iddstatus
-    global iddfeatures
-    global iddbattery
+        self.reinit()
 
-    from cgm.reader import SGReader
-    from cgm.controller import SocpController
-    from cgm.misc import CgmMiscData
-    from services.cm import CertificateManagement
-    from history.reader import HistoryReader
-    from services.hats import HATS
-    from device.info import DeviceInfo
-    from database.manager import DatabaseManager
-    from idd.gst_battery import GSTBatteryLevel
-    from idd.status.reader import IDDStatusReader
-    from idd.features.reader import IDDFeaturesReader
+    def reinit(self):
+        def create(modulename, classname, arg):
+            module = importlib.import_module(modulename)
+            cls = getattr(module, classname)
+            self.logger.info(f"Creating component {classname}")
+            obj = cls(arg)
+            self.__modules.append(modulename)
+            self.__components.append(obj)
+            return obj
 
-    sgr = SGReader(pump)
-    logging.info("sg reader created")
-    socpc = SocpController(pump)
-    logging.info("SocpController created")
-    cgmm = CgmMiscData(pump)
-    logging.info("CgmMiscData created")
-    certman = CertificateManagement(pump)
-    logging.info("CertificateManagement created")
-    hr = HistoryReader(pump)
-    logging.info("HistoryReader created")
-    hatss = HATS(pump)
-    logging.info("HATS created")
-    devinf = DeviceInfo(pump)
-    logging.info("DeviceInfo created")
-    iddstatus = IDDStatusReader(pump)
-    logging.info("IDDStatusReader created")
-    iddfeatures = IDDFeaturesReader(pump)
-    logging.info("IDDFeaturesReader created")
-    iddbattery = GSTBatteryLevel(pump)
-    logging.info("GSTBatteryLevel created")
+        self.__components = []
+        self.__modules    = []
 
-    # special one that uses 'hr' instead of 'pump'
-    dbm = DatabaseManager(hr)
-    logging.info("DatabaseManager created")
+        self.logger.info("Creating components ...")
+        self.sgr         = create("cgm.reader",          "SGReader",              self.pump)
+        self.socpc       = create("cgm.controller",      "SocpController",        self.pump)
+        self.cgmm        = create("cgm.misc",            "CgmMiscData",           self.pump)
+        self.certman     = create("services.cm",         "CertificateManagement", self.pump)
+        self.hr          = create("history.reader",      "HistoryReader",         self.pump)
+        self.hatss       = create("services.hats",       "HATS",                  self.pump)
+        self.devinf      = create("device.info",         "DeviceInfo",            self.pump)
+        self.iddstatus   = create("idd.status.reader",   "IDDStatusReader",       self.pump)
+        self.iddfeatures = create("idd.features.reader", "IDDFeaturesReader",     self.pump)
+        self.iddbattery  = create("idd.gst_battery",     "GSTBatteryLevel",       self.pump)
+        # NOTE: uses history reader instead of pump
+        self.dbm         = create("database.manager",    "DatabaseManager",       self.hr)
 
-    return
+    def unsubscribe(self):
+        self.logger.info("Unsubscribing components ...")
+        for c in self.__components:
+            c.unsubscribe()
 
+    def reload_modules(self):
+        self.logger.info("Reloading modules ...")
+        for module_name in self.__modules:
+            try:
+                # remove module from sys.modules and reimport
+                self.logger.debug(f"Reloading module {module_name}")
+                if module_name in sys.modules:
+                    del sys.modules[module_name]
+                importlib.import_module(module_name)
+            except Exception as e:
+                self.logger.error(f"Reload failed for module {module_name}: {e}")
 
-def unsubscribe_components():
-
-    global sgr
-    global socpc
-    global cgmm
-    global certman
-    global hr
-    global hatss
-    global devinf
-    global iddstatus
-    global iddfeatures
-    global iddbattery
-
-    sgr.unsubscribe()
-    socpc.unsubscribe()
-    cgmm.unsubscribe()
-    certman.unsubscribe()
-    hr.unsubscribe()
-    hatss.unsubscribe()
-    devinf.unsubscribe()
-    iddstatus.unsubscribe()
-    iddfeatures.unsubscribe()
-    iddbattery.unsubscribe()
-
-    return
 
 def reload_modules():
-
     global actions
-    global pump
-
-    modules_to_reload = [
-        'cgm.reader',
-        'cgm.controller',
-        'cgm.misc',
-        'services.cm',
-        'history.reader',
-        'services.hats',
-        'device.info',
-        'database.manager',
-        'idd.status.reader',
-        'idd.features.reader',
-        'idd.gst_battery',
-    ]
+    global components
 
     # We have to unsubscribe from the component's characteristic
     # notifications/indications before reloading. This will clear the
@@ -163,24 +104,16 @@ def reload_modules():
     # see https://github.com/ukBaz/python-bluezero/issues/342#issuecomment-894165954
     #
     # (That commit has since been merged into the bluezero codebase.)
-    logging.info("Unsubscribing components...")
-    unsubscribe_components()
+    components.unsubscribe()
 
     # Clear actions dict first to break closures holding references
     actions.clear()
 
     # Remove modules from sys.modules and reimport
-    for mod_name in modules_to_reload:
-        try:
-            if mod_name in sys.modules:
-                del sys.modules[mod_name]
-            importlib.import_module(mod_name)
-            logging.info(f"Reloaded: {mod_name}")
-        except Exception as e:
-            logging.error(f"Reload failed for {mod_name}: {e}")
+    components.reload_modules()
 
     # Reinitialize components and actions
-    initialize_components(pump)
+    components.reinit()
     setup_actions()
     logging.info("Components re-initialized")
     return
@@ -194,36 +127,39 @@ def print_help():
 
 def setup_actions():
     global actions
+    global components
 
     numbered_actions = [
-        ('Read sensor glucose value', lambda: sgr.get_value()),
-        ('Read sensor details',       lambda: socpc.read_sensor_details()),
+        ('Read sensor glucose value', lambda: components.sgr.get_value()),
+        ('Read sensor details',       lambda: components.socpc.read_sensor_details()),
 
-        ('Read CGM run time',       lambda: cgmm.read_run_time()),
-        ('Read CGM start time',     lambda: cgmm.read_start_time()),
-        ('Read CGM remaining time', lambda: cgmm.calc_remaining_time()),
-        ('Read CGM features',       lambda: cgmm.get_features()),
+        ('Read CGM run time',       lambda: components.cgmm.read_run_time()),
+        ('Read CGM start time',     lambda: components.cgmm.read_start_time()),
+        ('Read CGM remaining time', lambda: components.cgmm.calc_remaining_time()),
+        ('Read CGM features',       lambda: components.cgmm.get_features()),
 
-        ('Send certificate mgmt request', lambda: certman.send_request()),
-        ('Send HATS request',             lambda: hatss.send_request()),
+        ('Send certificate mgmt request', lambda: components.certman.send_request()),
+        ('Send HATS request',             lambda: components.hatss.send_request()),
 
-        ('Read IDD History - record count',    lambda: hr.get_available_record_count()),
-        ('Read IDD History - last record',     lambda: hr.get_last_record()),
-        ('Read IDD History - first record',    lambda: hr.get_first_record()),
-        ('Read IDD History - last 10 records', lambda: hr.get_last_n_records()),
-        ('Sync all history data to the database (may take several minutes!)', lambda: dbm.sync()),
-        ('Read device info', lambda: devinf.get_device_info()),
+        ('Read IDD History - record count',    lambda: components.hr.get_available_record_count()),
+        ('Read IDD History - last record',     lambda: components.hr.get_last_record()),
+        ('Read IDD History - first record',    lambda: components.hr.get_first_record()),
+        ('Read IDD History - last 10 records', lambda: components.hr.get_last_n_records()),
 
-        ('Read pump features', lambda: iddfeatures.get_pump_features()),
+        ('Sync all history data to the database (may take several minutes!)', lambda: components.dbm.sync()),
 
-        ('Read IDD status - Get Time In Range',       lambda: iddstatus.get_time_in_range()),
-        ('Read IDD status - Get Insulin On Board',    lambda: iddstatus.get_insulin_on_board()),
-        ('Read IDD status - Get Therapy Algo States', lambda: iddstatus.get_therapy_algorithm_states()),
-        ('Read IDD status - Get Active Basal Rate Delivery', lambda: iddstatus.get_active_basal_rate_delivery()),
-        ('Read IDD status - Pump Status',             lambda: iddstatus.get_pump_status()),
-        ('Read IDD GST Battery Level',                lambda: iddbattery.get_value()),
+        ('Read device info', lambda: components.devinf.get_device_info()),
 
-        ('IDD status test all calls', lambda: iddstatus.test_all()),
+        ('Read pump features', lambda: components.iddfeatures.get_pump_features()),
+
+        ('Read IDD status - Get Time In Range',       lambda: components.iddstatus.get_time_in_range()),
+        ('Read IDD status - Get Insulin On Board',    lambda: components.iddstatus.get_insulin_on_board()),
+        ('Read IDD status - Get Therapy Algo States', lambda: components.iddstatus.get_therapy_algorithm_states()),
+        ('Read IDD status - Get Active Basal Rate Delivery', lambda: components.iddstatus.get_active_basal_rate_delivery()),
+        ('Read IDD status - Pump Status',             lambda: components.iddstatus.get_pump_status()),
+        ('Read IDD GST Battery Level',                lambda: components.iddbattery.get_value()),
+
+        ('IDD status test all calls', lambda: components.iddstatus.test_all()),
     ]
 
     actions = {
@@ -255,12 +191,8 @@ def main_input_loop():
             print(f"Unknown key: {key}. Press 'h' for help.")
 
 def main_logic():
-    global sgr
-    global socpc
-    global cgmm
-    global certman
-    global hr
     global pump
+    global components
 
     initialized = False
 
@@ -284,7 +216,7 @@ def main_logic():
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            initialize_components(pump)
+            components = ReloadableComponents(pump)
             setup_actions()
 
             # Run main input loop

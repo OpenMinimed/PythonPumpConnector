@@ -43,6 +43,9 @@ class DatabaseManager:
             conn.commit()
             conn.close()
 
+    def unsubscribe(self):
+        pass
+
     def sync(self):
         """
         Sync the database with the device by fetching missing records.
