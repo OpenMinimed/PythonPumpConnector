@@ -7,8 +7,11 @@ import time
 from enum import IntEnum
 
 from history.data import HistoryData
-from utils.log_manager import LogManager
+
 from ble.sake import SakeHandler
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 
@@ -45,7 +48,7 @@ class IddRacpResponseCode(IntEnum):
     PROCEDURE_NOT_COMPLETED = 0x08  # 8
     OPERAND_NOT_SUPPORTED = 0x09  # 9
 
-class HistoryReader():
+class HistoryReader(GATTBase):
     """
     Test for dumping event history through the pump's IDD service
 
@@ -233,36 +236,16 @@ class HistoryReader():
         return
 
     def _configure_characteristics(self):
-
-        try:
-            # IDD service, IDD History Data characteristic
-            self.logger.info("Adding characteristic IDD History Data")
-            self.idd_history_data = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_HISTORY_DATA_CHAR)
-            while not self.idd_history_data.resolve_gatt():
-                time.sleep(0.2)
-            assert "notify" in dbus_tools.dbus_to_python(self.idd_history_data.flags)
-            self.idd_history_data.add_characteristic_cb(self._history_data_cb)
-            self.idd_history_data.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic IDD History Data")
-            self.logger.error(e)
+        # IDD service, IDD History Data characteristic
+        self.idd_history_data = self._add_char(UUID.IDD_SERVICE, UUID.IDD_HISTORY_DATA_CHAR,
+            ["notify"], callback=self._history_data_cb)
+        if self.idd_history_data is None:
             return False
 
-        try:
-            # IDD service, Record Access Control Point characteristic
-            self.logger.info("Adding characteristic RACP")
-            self.idd_racp = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_RACP_CHAR)
-            while not self.idd_racp.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(self.idd_racp.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(self.idd_racp.flags)
-            self.idd_racp.add_characteristic_cb(self._racp_cb)
-            self.idd_racp.start_notify()
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RACP")
-            self.logger.error(e)
+        # IDD service, Record Access Control Point characteristic
+        self.idd_racp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_RACP_CHAR,
+            ["write", "indicate"], callback=self._racp_cb)
+        if self.idd_racp is None:
             return False
 
         return True

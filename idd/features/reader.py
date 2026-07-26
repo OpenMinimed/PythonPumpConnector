@@ -4,14 +4,16 @@ from bluezero.central import Central
 import threading
 import time
 
-from utils.log_manager import LogManager
 from ble.sake import SakeHandler
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 from idd.features.pump_features import PumpFeatures
 
 
-class IDDFeaturesReader():
+class IDDFeaturesReader(GATTBase):
     """Reads the IDD Features characteristic
     """
 
@@ -51,18 +53,10 @@ class IDDFeaturesReader():
         return
 
     def _configure_characteristics(self):
-        try:
-            # IDD service, IDD Features characteristic
-            self.logger.info("Adding characteristic IDD Features")
-            chrc = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_FEATURES_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "read" in dbus_tools.dbus_to_python(chrc.flags)
-            self.idd_features = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic IDD Features")
-            self.logger.error(e)
+        # IDD service, IDD Features characteristic
+        self.idd_features = self._add_char(UUID.IDD_SERVICE, UUID.IDD_FEATURES_CHAR,
+            ["read"])
+        if self.idd_features is None:
             return False
 
         return True

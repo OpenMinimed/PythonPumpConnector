@@ -5,16 +5,18 @@ import threading
 import time
 from enum import IntEnum
 
-from utils.log_manager import LogManager
 from ble.sake import SakeHandler
-from utils.value_converter import ValueConverter
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
 from utils.uuids import UUID
+from utils.value_converter import ValueConverter
 
 from cgm.opcodes import SocpOpCode
 from cgm.sensor_details import SensorDetails
 
 
-class SocpController():
+class SocpController(GATTBase):
 
     def __init__(self, central:Central):
         self.logger = LogManager.get_logger(self.__class__.__name__)
@@ -30,18 +32,13 @@ class SocpController():
         return
     
     def _configure_characteristics(self):
-        self.logger.debug("Adding SOCP char")
-        self.socp_char = self.central.add_characteristic(UUID.CGM_SERVICE, UUID.CGM_SOCP_CHAR)
-        while not self.socp_char.resolve_gatt():
-            time.sleep(0.2)
-        self.logger.debug(f"socp char flags = {self.socp_char.flags}")
-        assert "write" in dbus_tools.dbus_to_python(self.socp_char.flags)
-        self.socp_char.add_characteristic_cb(self._socp_cb)
-        self.logger.debug("_socp_cb() added")
-        self.socp_char.start_notify()
-        self.logger.debug("socp notifications enabled")
-        return
-    
+        self.socp_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SOCP_CHAR,
+            ["write", "indicate"], callback=self._socp_cb)
+        if self.socp_char is None:
+            return False
+
+        return True
+
     def _read_session_id(self) -> int | None:
         raise NotImplementedError()
         # NOTE! this is not supported on the pump, only the sensor (?) 

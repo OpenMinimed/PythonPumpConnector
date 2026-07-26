@@ -4,12 +4,13 @@ from bluezero.central import Central
 import time
 from datetime import datetime, timedelta, timezone
 
-from utils.log_manager import LogManager
-
-from utils.parse_utils import ParseUtils
-from utils.value_converter import ValueConverter
 from ble.sake import SakeHandler
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
+from utils.parse_utils import ParseUtils
 from utils.uuids import UUID
+from utils.value_converter import ValueConverter
 
 from cgm.features import CGMFeatures
 
@@ -62,7 +63,7 @@ class CgmStartTime():
         return f"CgmStartTime({self.raw.hex() = }, {self.timeZoneOffset = }, {self.dstOffset = }, raw ts = {self.__format(self.ts_raw)}, final ts = {self.__format(self.ts_final)} )"
     
 
-class CgmMiscData:
+class CgmMiscData(GATTBase):
 
     def __init__(self, central:Central):
         self.logger = LogManager.get_logger(self.__class__.__name__)
@@ -142,26 +143,22 @@ class CgmMiscData:
         return features
 
     def _configure_characteristics(self):
+        self.run_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SESSION_RUN_TIME_CHAR,
+            ["read"])
+        if self.run_time_char is None:
+            return False
 
-        self.run_time_char = self.central.add_characteristic(
-            UUID.CGM_SERVICE, UUID.CGM_SESSION_RUN_TIME_CHAR)
-        while not self.run_time_char.resolve_gatt():
-            time.sleep(0.2)
-        assert "read" in dbus_tools.dbus_to_python(self.run_time_char.flags)
+        self.start_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SESSION_START_TIME_CHAR,
+            ["read"])
+        if self.start_time_char is None:
+            return False
 
-        self.start_time_char = self.central.add_characteristic(
-            UUID.CGM_SERVICE, UUID.CGM_SESSION_START_TIME_CHAR)
-        while not self.start_time_char.resolve_gatt():
-            time.sleep(0.2)
-        assert "read" in dbus_tools.dbus_to_python(self.start_time_char.flags)
+        self.feature_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_FEATURE_CHAR,
+            ["read"])
+        if self.feature_char is None:
+            return False
 
-        self.feature_char = self.central.add_characteristic(
-            UUID.CGM_SERVICE, UUID.CGM_FEATURE_CHAR)
-        while not self.feature_char.resolve_gatt():
-            time.sleep(0.2)
-        assert "read" in dbus_tools.dbus_to_python(self.feature_char.flags)
-
-        return
+        return True
 
 
 if __name__  == "__main__":

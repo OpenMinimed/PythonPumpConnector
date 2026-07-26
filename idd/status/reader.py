@@ -4,8 +4,10 @@ from bluezero.central import Central
 import threading
 import time
 
-from utils.log_manager import LogManager
 from ble.sake import SakeHandler
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 from idd.status.active_basal_rate_delivery import ActiveBasalRateDelivery
@@ -17,7 +19,7 @@ from idd.status.tir import TimeInRangeData
 
 # see IddStatusReaderResponseConverter
 
-class IDDStatusReader():
+class IDDStatusReader(GATTBase):
 
     def __init__(self, central: Central):
         self.logger = LogManager.get_logger(self.__class__.__name__)
@@ -198,35 +200,16 @@ class IDDStatusReader():
         return data
 
     def _configure_characteristics(self):
-        try:
-            # IDD service, Status Reader Control Point characteristic
-            self.logger.info("Adding characteristic SRCP")
-            chrc = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_SRCP_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._srcp_cb)
-            chrc.start_notify()
-            self.idd_srcp = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic SRCP")
-            self.logger.error(e)
+        # IDD service, Status Reader Control Point characteristic
+        self.idd_srcp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_SRCP_CHAR,
+            ["write", "indicate"], callback=self._srcp_cb)
+        if self.idd_srcp is None:
             return False
 
-        try:
-            # IDD service, Status characteristic
-            self.logger.info("Adding characteristic Status")
-            chrc = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_STATUS_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "read" in dbus_tools.dbus_to_python(chrc.flags)
-            self.idd_status = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic Status")
-            self.logger.error(e)
+        # IDD service, Status characteristic
+        self.idd_status = self._add_char(UUID.IDD_SERVICE, UUID.IDD_STATUS_CHAR,
+            ["read"])
+        if self.idd_status is None:
             return False
 
         return True

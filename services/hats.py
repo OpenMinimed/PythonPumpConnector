@@ -4,11 +4,12 @@ from bluezero.central import Central
 import threading
 import time
 
+from utils.gatt import GATTBase
 from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 
-class HATS():
+class HATS(GATTBase):
     """
     History And Trace Service
     """
@@ -135,71 +136,28 @@ class HATS():
         #     .. .. .. 06  Operand: SliceRacpResponseCode.NO_RECORDS_FOUND
 
     def _configure_characteristics(self):
-        try:
-            # HAT service, Slice Record characteristic
-            self.logger.info("Adding characteristic Slice Record")
-            chrc = self.central.add_characteristic(
-                UUID.HAT_SERVICE, UUID.HAT_SLICE_RECORD_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "notify" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._slice_record_cb)
-            chrc.start_notify()
-            self.hat_slice_record = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic Slice record")
-            self.logger.error(e)
+        # HAT service, Slice Record characteristic
+        self.hat_slice_record = self._add_char(UUID.HAT_SERVICE, UUID.HAT_SLICE_RECORD_CHAR,
+            ["notify"], callback=self._slice_record_cb)
+        if self.hat_slice_record is None:
             return False
 
-        try:
-            # HAT service, RTMCP characteristic
-            self.logger.info("Adding characteristic RTMCP")
-            chrc = self.central.add_characteristic(
-                UUID.HAT_SERVICE, UUID.HAT_RTMCP_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._rtmcp_cb)
-            chrc.start_notify()
-            self.hat_rtmcp = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RTMCP")
-            self.logger.error(e)
+        # HAT service, RTMCP characteristic
+        self.hat_rtmcp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RTMCP_CHAR,
+            ["write", "indicate"], callback=self._rtmcp_cb)
+        if self.hat_rtmcp is None:
             return False
 
-        try:
-            # HAT service, RMCPSE characteristic
-            self.logger.info("Adding characteristic RMCP SE")
-            chrc = self.central.add_characteristic(
-                UUID.HAT_SERVICE, UUID.HAT_RMCPSE_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._rmcpse_cb)
-            chrc.start_notify()
-            self.hat_rmcpse = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RMCP SE")
-            self.logger.error(e)
+        # HAT service, RMCPSE characteristic
+        self.hat_rmcpse = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RMCPSE_CHAR,
+            ["write", "indicate"], callback=self._rmcpse_cb)
+        if self.hat_rmcpse is None:
             return False
 
-        try:
-            # HAT service, RACP characteristic
-            self.logger.info("Adding characteristic RACP")
-            chrc = self.central.add_characteristic(
-                UUID.HAT_SERVICE, UUID.HAT_RACP_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._racp_cb)
-            chrc.start_notify()
-            self.hat_racp = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic RACP")
-            self.logger.error(e)
+        # HAT service, RACP characteristic
+        self.hat_racp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RACP_CHAR,
+            ["write", "indicate"], callback=self._racp_cb)
+        if self.hat_racp is None:
             return False
 
         return True

@@ -3,11 +3,12 @@ from bluezero.central import Central
 
 import time
 
+from utils.gatt import GATTBase
 from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 
-class GSTBatteryLevel:
+class GSTBatteryLevel(GATTBase):
     """
     GST Battery Level (sensor's transmitter)
     """
@@ -35,19 +36,10 @@ class GSTBatteryLevel:
         return value
 
     def _configure_characteristics(self):
-        try:
-            # IDD service, GST Battery Level characteristic
-            self.logger.info("Adding characteristic GST Battery Level")
-            chrc = self.central.add_characteristic(
-                UUID.IDD_SERVICE, UUID.IDD_GST_BATTERY_LEVEL_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "read" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.start_notify()
-            self.battery_level = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic GST Battery Level")
-            self.logger.error(e)
+        # IDD service, GST Battery Level characteristic
+        self.battery_level = self._add_char(UUID.IDD_SERVICE, UUID.IDD_GST_BATTERY_LEVEL_CHAR,
+            ["read"])
+        if self.battery_level is None:
             return False
 
         return True

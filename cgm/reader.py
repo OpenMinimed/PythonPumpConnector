@@ -4,14 +4,16 @@ from bluezero.central import Central
 import threading
 import time
 
-from cgm.measurement import CGMMeasurement
-from utils.log_manager import LogManager
-
 from ble.sake import SakeHandler
+
+from cgm.measurement import CGMMeasurement
+
+from utils.gatt import GATTBase
+from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 
-class SGReader:
+class SGReader(GATTBase):
 
     """
     Test for reading an SG value through the pump's CGM service
@@ -110,31 +112,19 @@ class SGReader:
 
 
     def _configure_characteristics(self):
-
         # CGM service, CGM Measurement characteristic
-        self.logger.info("Adding characteristic CGM Measurement")
-        self.cgm_measurement = self.central.add_characteristic(
-            UUID.CGM_SERVICE, UUID.CGM_MEASUREMENT_CHAR)
-        while not self.cgm_measurement.resolve_gatt():
-            time.sleep(0.2)
-        assert "notify" in dbus_tools.dbus_to_python(self.cgm_measurement.flags)
-        self.cgm_measurement.add_characteristic_cb(self._measurement_cb)
-        self.logger.debug("measurement_cb added")
-        self.cgm_measurement.start_notify()
+        self.cgm_measurement = self._add_char(UUID.CGM_SERVICE, UUID.CGM_MEASUREMENT_CHAR,
+            ["notify"], callback=self._measurement_cb)
+        if self.cgm_measurement is None:
+            return False
 
         # CGM service, Record Access Control Point characteristic
-        self.logger.info("Adding characteristic RACP")
-        self.cgm_racp = self.central.add_characteristic(
-            UUID.CGM_SERVICE, UUID.CGM_RACP_CHAR)
-        while not self.cgm_racp.resolve_gatt():
-            time.sleep(0.2)
-        assert "write"    in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-        assert "indicate" in dbus_tools.dbus_to_python(self.cgm_racp.flags)
-        self.cgm_racp.add_characteristic_cb(self._racp_cb)
-        self.logger.debug("racp_cb added")
-        self.cgm_racp.start_notify()
-    
-        return
+        self.cgm_racp = self._add_char(UUID.CGM_SERVICE, UUID.CGM_RACP_CHAR,
+            ["write", "indicate"], callback=self._racp_cb)
+        if self.cgm_racp is None:
+            return False
+
+        return True
 
     def _racp_cb(self, iface, changed_props, invalidated_props):
         if "Value" in changed_props:

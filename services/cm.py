@@ -4,11 +4,12 @@ from bluezero.central import Central
 import threading
 import time
 
+from utils.gatt import GATTBase
 from utils.log_manager import LogManager
 from utils.uuids import UUID
 
 
-class CertificateManagement:
+class CertificateManagement(GATTBase):
     """
     Certificate Management
     """
@@ -51,38 +52,16 @@ class CertificateManagement:
         return
 
     def _configure_characteristics(self):
-        try:
-            # CM service, Certificate Management Control Point characteristic
-            self.logger.info("Adding characteristic CMCP")
-            chrc = self.central.add_characteristic(
-                UUID.CM_SERVICE, UUID.CM_CP_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write"    in dbus_tools.dbus_to_python(chrc.flags)
-            assert "indicate" in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._cmcp_cb)
-            chrc.start_notify()
-            self.cm_cp = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic CMCP")
-            self.logger.error(e)
+        # CM service, Certificate Management Control Point characteristic
+        self.cm_cp = self._add_char(UUID.CM_SERVICE, UUID.CM_CP_CHAR,
+            ["write", "indicate"], callback=self._cmcp_cb)
+        if self.cm_cp is None:
             return False
 
-        try:
-            # CM service, Certificate Managment Data characteristic
-            self.logger.info("Adding characteristic Data")
-            chrc = self.central.add_characteristic(
-                UUID.CM_SERVICE, UUID.CM_DATA_CHAR)
-            while not chrc.resolve_gatt():
-                time.sleep(0.2)
-            assert "write-without-response" in dbus_tools.dbus_to_python(chrc.flags)
-            assert "notify"                 in dbus_tools.dbus_to_python(chrc.flags)
-            chrc.add_characteristic_cb(self._data_cb)
-            chrc.start_notify()
-            self.cm_data = chrc
-        except Exception as e:
-            self.logger.error("Failed to add characteristic Data")
-            self.logger.error(e)
+        # CM service, Certificate Managment Data characteristic
+        self.cm_data = self._add_char(UUID.CM_SERVICE, UUID.CM_DATA_CHAR,
+            ["write-without-response", "notify"], callback=self._data_cb)
+        if self.cm_data is None:
             return False
 
         return True

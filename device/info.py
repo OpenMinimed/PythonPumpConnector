@@ -4,10 +4,12 @@ from bluezero.central import Central
 import threading
 import time
 
+from utils.gatt import GATTBase
 from utils.log_manager import LogManager
 from utils.uuids import UUID
 
-class DeviceInfo():
+
+class DeviceInfo(GATTBase):
 
     model:str = None
     serial:str = None
@@ -28,14 +30,6 @@ class DeviceInfo():
     def unsubscribe(self):
         # no callbacks to remove
         return
-
-    # TODO: generalize all classes and maybe use this everywhere?
-    def __add_char(self, service:UUID, char:UUID, expected_flags:str):
-        toret = self.central.add_characteristic(service, char)
-        while not toret.resolve_gatt():
-            time.sleep(0.2)
-        assert expected_flags in dbus_tools.dbus_to_python(toret.flags)
-        return toret
 
     def read_battery_level(self) -> int:
         raw = self.batt_char.read_raw_value()
@@ -64,11 +58,30 @@ class DeviceInfo():
         return 
 
     def _configure_characteristics(self):
-        flags = "read"
-        self.model_char = self.__add_char(UUID.DIS_SERVICE, UUID.DIS_MODEL_NO_CHAR, flags)
-        self.serial_char = self.__add_char(UUID.DIS_SERVICE, UUID.DIS_SERIAL_NO_CHAR, flags)
-        self.hw_char = self.__add_char(UUID.DIS_SERVICE, UUID.DIS_HW_REV_CHAR, flags)
-        self.fw_char = self.__add_char(UUID.DIS_SERVICE, UUID.DIS_FW_REV_CHAR, flags)
-        self.batt_char = self.__add_char(UUID.BATT_SERVICE, UUID.BATT_LEVEL_CHAR, flags)
-        return
+        self.model_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_MODEL_NO_CHAR,
+            ["read"])
+        if self.model_char is None:
+            return False
+
+        self.serial_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_SERIAL_NO_CHAR,
+            ["read"])
+        if self.serial_char is None:
+            return False
+
+        self.hw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_HW_REV_CHAR,
+            ["read"])
+        if self.hw_char is None:
+            return False
+
+        self.fw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_FW_REV_CHAR,
+            ["read"])
+        if self.fw_char is None:
+            return False
+
+        self.batt_char = self._add_char(UUID.BATT_SERVICE, UUID.BATT_LEVEL_CHAR,
+            ["read"])
+        if self.batt_char is None:
+            return False
+
+        return True
 
