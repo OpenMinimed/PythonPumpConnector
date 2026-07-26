@@ -32,7 +32,7 @@ class SocpController(GATTBase):
         return
     
     def _configure_characteristics(self):
-        self.socp_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SOCP_CHAR,
+        self.socp_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_SOCP,
             ["write", "indicate"], callback=self._socp_cb)
         if self.socp_char is None:
             return False

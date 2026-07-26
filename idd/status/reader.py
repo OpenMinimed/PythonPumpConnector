@@ -201,13 +201,13 @@ class IDDStatusReader(GATTBase):
 
     def _configure_characteristics(self):
         # IDD service, Status Reader Control Point characteristic
-        self.idd_srcp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_SRCP_CHAR,
+        self.idd_srcp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_SRCP,
             ["write", "indicate"], callback=self._srcp_cb)
         if self.idd_srcp is None:
             return False
 
         # IDD service, Status characteristic
-        self.idd_status = self._add_char(UUID.IDD_SERVICE, UUID.IDD_STATUS_CHAR,
+        self.idd_status = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_STATUS,
             ["read"])
         if self.idd_status is None:
             return False

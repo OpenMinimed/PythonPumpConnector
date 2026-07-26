@@ -113,13 +113,13 @@ class SGReader(GATTBase):
 
     def _configure_characteristics(self):
         # CGM service, CGM Measurement characteristic
-        self.cgm_measurement = self._add_char(UUID.CGM_SERVICE, UUID.CGM_MEASUREMENT_CHAR,
+        self.cgm_measurement = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_MEASUREMENT,
             ["notify"], callback=self._measurement_cb)
         if self.cgm_measurement is None:
             return False
 
         # CGM service, Record Access Control Point characteristic
-        self.cgm_racp = self._add_char(UUID.CGM_SERVICE, UUID.CGM_RACP_CHAR,
+        self.cgm_racp = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_RACP,
             ["write", "indicate"], callback=self._racp_cb)
         if self.cgm_racp is None:
             return False

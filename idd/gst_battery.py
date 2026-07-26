@@ -37,7 +37,7 @@ class GSTBatteryLevel(GATTBase):
 
     def _configure_characteristics(self):
         # IDD service, GST Battery Level characteristic
-        self.battery_level = self._add_char(UUID.IDD_SERVICE, UUID.IDD_GST_BATTERY_LEVEL_CHAR,
+        self.battery_level = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_GST_BATTERY_LEVEL,
             ["read"])
         if self.battery_level is None:
             return False

@@ -53,13 +53,13 @@ class CertificateManagement(GATTBase):
 
     def _configure_characteristics(self):
         # CM service, Certificate Management Control Point characteristic
-        self.cm_cp = self._add_char(UUID.CM_SERVICE, UUID.CM_CP_CHAR,
+        self.cm_cp = self._add_char(UUID.CM_SERVICE, UUID.CM_CHAR_CP,
             ["write", "indicate"], callback=self._cmcp_cb)
         if self.cm_cp is None:
             return False
 
         # CM service, Certificate Managment Data characteristic
-        self.cm_data = self._add_char(UUID.CM_SERVICE, UUID.CM_DATA_CHAR,
+        self.cm_data = self._add_char(UUID.CM_SERVICE, UUID.CM_CHAR_DATA,
             ["write-without-response", "notify"], callback=self._data_cb)
         if self.cm_data is None:
             return False

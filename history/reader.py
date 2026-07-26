@@ -237,13 +237,13 @@ class HistoryReader(GATTBase):
 
     def _configure_characteristics(self):
         # IDD service, IDD History Data characteristic
-        self.idd_history_data = self._add_char(UUID.IDD_SERVICE, UUID.IDD_HISTORY_DATA_CHAR,
+        self.idd_history_data = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_HISTORY_DATA,
             ["notify"], callback=self._history_data_cb)
         if self.idd_history_data is None:
             return False
 
         # IDD service, Record Access Control Point characteristic
-        self.idd_racp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_RACP_CHAR,
+        self.idd_racp = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_RACP,
             ["write", "indicate"], callback=self._racp_cb)
         if self.idd_racp is None:
             return False

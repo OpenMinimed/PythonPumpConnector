@@ -58,27 +58,27 @@ class DeviceInfo(GATTBase):
         return 
 
     def _configure_characteristics(self):
-        self.model_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_MODEL_NO_CHAR,
+        self.model_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_CHAR_MODEL_NO,
             ["read"])
         if self.model_char is None:
             return False
 
-        self.serial_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_SERIAL_NO_CHAR,
+        self.serial_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_CHAR_SERIAL_NO,
             ["read"])
         if self.serial_char is None:
             return False
 
-        self.hw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_HW_REV_CHAR,
+        self.hw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_CHAR_HW_REV,
             ["read"])
         if self.hw_char is None:
             return False
 
-        self.fw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_FW_REV_CHAR,
+        self.fw_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_CHAR_FW_REV,
             ["read"])
         if self.fw_char is None:
             return False
 
-        self.batt_char = self._add_char(UUID.BATT_SERVICE, UUID.BATT_LEVEL_CHAR,
+        self.batt_char = self._add_char(UUID.BATT_SERVICE, UUID.BATT_CHAR_LEVEL,
             ["read"])
         if self.batt_char is None:
             return False

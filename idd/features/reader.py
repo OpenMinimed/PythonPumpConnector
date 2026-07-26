@@ -54,7 +54,7 @@ class IDDFeaturesReader(GATTBase):
 
     def _configure_characteristics(self):
         # IDD service, IDD Features characteristic
-        self.idd_features = self._add_char(UUID.IDD_SERVICE, UUID.IDD_FEATURES_CHAR,
+        self.idd_features = self._add_char(UUID.IDD_SERVICE, UUID.IDD_CHAR_FEATURES,
             ["read"])
         if self.idd_features is None:
             return False

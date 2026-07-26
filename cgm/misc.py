@@ -143,17 +143,17 @@ class CgmMiscData(GATTBase):
         return features
 
     def _configure_characteristics(self):
-        self.run_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SESSION_RUN_TIME_CHAR,
+        self.run_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_SESSION_RUN_TIME,
             ["read"])
         if self.run_time_char is None:
             return False
 
-        self.start_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_SESSION_START_TIME_CHAR,
+        self.start_time_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_SESSION_START_TIME,
             ["read"])
         if self.start_time_char is None:
             return False
 
-        self.feature_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_FEATURE_CHAR,
+        self.feature_char = self._add_char(UUID.CGM_SERVICE, UUID.CGM_CHAR_FEATURE,
             ["read"])
         if self.feature_char is None:
             return False

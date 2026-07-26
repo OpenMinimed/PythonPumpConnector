@@ -137,25 +137,25 @@ class HATS(GATTBase):
 
     def _configure_characteristics(self):
         # HAT service, Slice Record characteristic
-        self.hat_slice_record = self._add_char(UUID.HAT_SERVICE, UUID.HAT_SLICE_RECORD_CHAR,
+        self.hat_slice_record = self._add_char(UUID.HAT_SERVICE, UUID.HAT_CHAR_SLICE_RECORD,
             ["notify"], callback=self._slice_record_cb)
         if self.hat_slice_record is None:
             return False
 
         # HAT service, RTMCP characteristic
-        self.hat_rtmcp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RTMCP_CHAR,
+        self.hat_rtmcp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_CHAR_RTMCP,
             ["write", "indicate"], callback=self._rtmcp_cb)
         if self.hat_rtmcp is None:
             return False
 
         # HAT service, RMCPSE characteristic
-        self.hat_rmcpse = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RMCPSE_CHAR,
+        self.hat_rmcpse = self._add_char(UUID.HAT_SERVICE, UUID.HAT_CHAR_RMCPSE,
             ["write", "indicate"], callback=self._rmcpse_cb)
         if self.hat_rmcpse is None:
             return False
 
         # HAT service, RACP characteristic
-        self.hat_racp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_RACP_CHAR,
+        self.hat_racp = self._add_char(UUID.HAT_SERVICE, UUID.HAT_CHAR_RACP,
             ["write", "indicate"], callback=self._racp_cb)
         if self.hat_racp is None:
             return False
