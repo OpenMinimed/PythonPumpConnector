@@ -32,6 +32,10 @@ sh:SakeHandler = None
 device:Device = None
 pump = None
 
+# dev flag to shut off certain functionality when we run as CareLink device
+# TODO: remove this once we get a *proper* connection working in this mode
+is_carelink = False
+
 # container for component instances
 components = None
 
@@ -218,8 +222,12 @@ def main_logic():
             pump = Central(device.address, device.adapter)
             pump.load_gatt()
 
-            components = ReloadableComponents(pump)
-            setup_actions()
+            if not is_carelink:
+                components = ReloadableComponents(pump)
+                setup_actions()
+            else:
+                logging.warning("Running as CareLink device: skipping components setup")
+                logging.warning("Running as CareLink device: skipping actions setup")
 
             # Run main input loop
             print_help()
@@ -231,6 +239,7 @@ def main():
     global advertiser
     global sh
     global device
+    global is_carelink
 
     # Fix bluezero's log messages showing up twice
     #
@@ -278,6 +287,8 @@ def main():
     # check if bt is even on
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
+
+    is_carelink = (args.carelink is not None)
 
     # The pump only reconnects to mobile devices that are using a Resolvable
     # Private Address (RPA). And it will only connect to CareLink devices that
