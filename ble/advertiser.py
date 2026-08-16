@@ -1,10 +1,9 @@
 import logging
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from time import sleep
 import atexit
-import re
 from threading import Thread
-import subprocess
 
 from utils.log_manager import LogManager
 from utils.os_utils import exec
@@ -12,8 +11,7 @@ from utils.os_utils import exec
 from bluezero.device import Device
 
 
-class PumpAdvertiser():
-
+class Advertiser(metaclass=ABCMeta):
     adv_name:str = None
     log:logging.Logger = None
     instance_id:int = None
@@ -22,7 +20,6 @@ class PumpAdvertiser():
     connected:bool = False
     fake_adv_time:int = 5 # in sec. this is passed down to the OS
     adv_thread_time:float = 4.9 # the real value we let the advertisement packets live
-    already_paired:bool
 
     startup_commands:list[str] = [
         "sudo btmgmt power off",
@@ -38,106 +35,30 @@ class PumpAdvertiser():
         # DOES NOT WORK, NEEDS CONFIG WORKAROUND!!!: "sudo btmgmt privacy device"
     ]
 
-    def __is_valid_adv_name(self, s: str) -> bool:
-        return bool(re.fullmatch(r"Mobile .{0,7}", s))
-    
-    def __is_kernel_locked_down(self) -> bool:
-        locked = True
-        with open("/sys/kernel/security/lockdown", "r") as f:
-            for f in f.readlines():
-                if "[none]" in f:
-                    locked = False
-                    break
-
-        self.logger.info(f"kernel is locked down? {locked}")
-        return locked
-    
-    def __check_kernel_workaround_applied(self) -> bool:
-        paths = [
-            '/sys/kernel/debug/bluetooth/hci0/adv_min_interval',
-            '/sys/kernel/debug/bluetooth/hci0/adv_max_interval'
-        ]
-        for p in paths:
-            result = subprocess.run(
-                ["sudo", "cat", p],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            result = result.stdout.strip()
-            result = int(result)
-            if result > 100:
-                self.logger.warning("kernel level interval fix is NOT applied!")
-                return False
-        self.logger.info("kernel level interval fix is already applied!")
-        return True
-    
-    def __set_kernel_fix(self) -> None:
-        self.logger.info(f"applying kernel level fix...")
-        exec("echo 50 | sudo tee /sys/kernel/debug/bluetooth/hci0/adv_min_interval")
-        exec("echo 60 | sudo tee /sys/kernel/debug/bluetooth/hci0/adv_max_interval")
-        return
-
-    def __init__(self, adv_name:str, already_paired:bool=False, instance_id:int=1):
+    def __init__(self, adv_name: str, instance_id: int = 1):
         """
-        adv_name: name for advertising
-        already_paired: to advertise on the other uuid with a bit flip
+        adv_name:    name for advertising
         instance_id: the bluez instance id
         """
 
+        self.adv_name = adv_name
         self.instance_id = instance_id
         self.logger = LogManager.get_logger(self.__class__.__name__)
-        self.already_paired = already_paired
-
-        if already_paired:
-            self.adv_thread_time = 1.0 # its helpful because we clear the default bluezero advertismeent more often
-            if not self.__check_kernel_workaround_applied():
-                if not self.__is_kernel_locked_down():
-                    self.__set_kernel_fix()
-                else:
-                    self.adv_thread_time = 0.05 # userland workaround if we can not use the kernel level fix. if we spam the commands, we can get down under the 1s+ default advertising interval without any extra effort
-
-        if already_paired:
-            # NOTE: the pump ignores the advertising name for reconnects
-            self.adv_name = None
-        else:
-            # NOTE: the pump only accepts advertisers with a specific naming scheme
-            self.adv_name = "Mobile " + adv_name
-            if not self.__is_valid_adv_name(self.adv_name):
-                raise Exception(f"Invalid advertising name given: {self.adv_name}")
 
         # run btmgmt commands
         for c in self.startup_commands:
             exec(c)
-            sleep(self.sleep_delay) # wait for hci to actually perform it. NOTE: make this delay larger if you see errors!
+            # wait for hci to actually perform it. NOTE: make this delay
+            # larger if you see errors!
+            sleep(self.sleep_delay)
 
         atexit.register(self.stop_adv) # just to be on the safe side
         self.logger.warning("always accept the pairing if your desktop environment asks for it!")
-
         return
 
-    def __create_adv_cmd(self) -> str:
-        data = ""
-
-        # Flags: we have turned BR/EDR off in self.startup_commands
-        data += "02 01 06"
-
-        # 16-bit Service Class UUIDs: SAKE
-        data += "03 03 "
-        data += "81 fe" if self.already_paired else "82 fe"
-
-        # Device Name
-        if not self.already_paired:
-            length = 1 + len(self.adv_name)
-            data += f"{length:02x} 09 {self.adv_name.encode().hex()}"
-
-        data = data.replace(" ", "")
-
-        # timeout is how long the bluez object lives (??)
-        # set duration and timeout to the same for now, idk
-
-        full_cmd = f"sudo btmgmt add-adv -d {data} -t {self.fake_adv_time} -D {self.fake_adv_time} {self.instance_id}"
-        return full_cmd
+    @abstractmethod
+    def _create_adv_cmd(self) -> str:
+        ...
 
     def __clear_adv(self):
         exec("sudo btmgmt clr-adv")
@@ -146,10 +67,10 @@ class PumpAdvertiser():
     def stop_adv(self) -> None:
         self.logger.info("advertising stopped")
 
-        # WARNING! this is a very hacky and deliberate almost-race-condition... dont change these two lines 
+        # WARNING! This is a very hacky and deliberate almost-race-condition.
+        # Don't change these two lines!
         self.adv_started = None
         self.__clear_adv()
-        
         return
 
     def start_adv(self) -> None:
@@ -170,7 +91,6 @@ class PumpAdvertiser():
         self.connected = True
         self.stop_adv()
         # does not work: exec(f"bluetoothctl trust {device.address}") # auto accept it (skip gui check)
-        
         return
 
     def on_disconnect_cb(self, device:Device):
@@ -178,25 +98,15 @@ class PumpAdvertiser():
         self.connected = False
         self.start_adv()
         return
-    
+
     def __adv_thread(self):
-        # hacky, since bluezero also starts an advertisement, which is not good for us and we need to "fight it"
+        # hacky, since bluezero also starts an advertisement, which is not
+        # good for us and we need to "fight it"
         while True:
             if self.adv_started == None:
                 return
-            cmd = self.__create_adv_cmd()
+            cmd = self._create_adv_cmd()
             exec(cmd)
             sleep(self.adv_thread_time)
             self.__clear_adv()
 
-    # def __get_advertisement_count(self):
-    #     result = subprocess.run(
-    #         ["sudo", "btmgmt", "advinfo"],
-    #         capture_output=True,
-    #         text=True,
-    #         check=True,
-    #     )
-    #     match = re.search(r"Instances list with (\d+) item", result.stdout)
-    #     if not match:
-    #         raise RuntimeError(f"Could not find advertisement count in: {result.stdout}")
-    #     return int(match.group(1))

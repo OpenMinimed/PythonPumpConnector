@@ -17,7 +17,9 @@ from bluezero.central import Central
 from utils.log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
 
-from ble.advertiser import PumpAdvertiser
+from ble.advertiser import Advertiser
+from ble.mobile_advertiser import MobileAdvertiser
+from ble.carelink_advertiser import CareLinkAdvertiser
 from ble.peripheral import PeripheralHandler, BleService, BleChar
 from ble.sake import SakeHandler
 
@@ -25,7 +27,7 @@ import datetime as dt
 import importlib
 import sys
 
-pa:PumpAdvertiser = None
+advertiser:Advertiser = None
 sh:SakeHandler = None
 device:Device = None
 pump = None
@@ -226,7 +228,7 @@ def main_logic():
 def main():
 
     global ph
-    global pa
+    global advertiser
     global sh
     global device
 
@@ -247,14 +249,28 @@ def main():
             for h in bluezero_logger.handlers:
                 bluezero_logger.removeHandler(h)
 
+    def confirmation_code(string):
+        try:
+            code = int(string)
+        except ValueError:
+            raise argparse.ArgumentTypeError("not an integer")
+        if code < 0 or code > 999999:
+            raise argparse.ArgumentTypeError("not in range 000000..999999")
+        return code
+
     # parse CLI args
     parser = argparse.ArgumentParser(description="Python Pump Connector")
     parser.add_argument('adv_name',
         nargs='?',
         help='Name to use for advertising. 0–7 ASCII characters. Will be chosen randomly if not supplied.')
-    parser.add_argument('-r', '--reconnect',
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-r', '--reconnect',
         action='store_true',
         help='Reconnect to an already paired pump')
+    group.add_argument('-c', '--carelink',
+        metavar='CODE',
+        type=confirmation_code,
+        help='Connect to pump as CareLink device using the confirmation code CODE')
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
     args = parser.parse_args()
@@ -263,8 +279,22 @@ def main():
     if not is_bluetooth_active():
        raise Exception("you need to have bluetooth running!")
 
-    if not bt_privacy_on():
-        raise Exception("BT privacy does not seem to be on. You need to manually edit /etc/bluetooth/main.conf and add 'Privacy = device' under [General]. After that, restart the bluethoothd service and re-pair on your pump!")
+    # The pump only reconnects to mobile devices that are using a Resolvable
+    # Private Address (RPA). And it will only connect to CareLink devices that
+    # do *not* use private addresses. Great.
+    privacy_on = bt_privacy_on()
+    if args.carelink is None:
+        # mobile device
+        if not privacy_on:
+            raise Exception("BT privacy does not seem to be on. "
+                + "Open /etc/bluetooth/main.conf and add 'Privacy = device' under [General]. "
+                + "After that, restart the bluethoothd service and re-pair on your pump!")
+    else:
+        # CareLink device
+        if privacy_on:
+            raise Exception("BT privacy seems to be on. "
+                + "Open /etc/bluetooth/main.conf and add 'Privacy = off' under [General]. "
+                + "After that, restart the bluethoothd service and try again.")
 
     # ask for pw
     logging.warning("Enter sudo password if asked: (we need this for the low level btmgmt tool)")
@@ -285,9 +315,13 @@ def main():
     else:
         forget_pump_devices()
         if args.adv_name is None:
-            # generate a random name for advertising
-            adv_name = str(random.randint(100000, 999999))
-            logging.info(f"Generated random name for advertising: {adv_name}")
+            if args.carelink is None:
+                # generate a random name for advertising as mobile device
+                adv_name = str(random.randint(100000, 999999))
+                logging.info(f"Generated random name for advertising: {adv_name}")
+            else:
+                # use default name for advertising as CareLink device
+                adv_name = "PC"
         else:
             adv_name = args.adv_name
 
@@ -296,28 +330,58 @@ def main():
     else:
         logging.info("Creating advertiser without name")
 
-    pa = PumpAdvertiser(adv_name, args.reconnect)
+    if args.carelink is None:
+        # advertise as mobile device (either for pairing or for reconnect)
+        advertiser = MobileAdvertiser(adv_name, args.reconnect)
+    else:
+        # advertise as CareLink device
+        advertiser = CareLinkAdvertiser(adv_name, adapter_addr, args.carelink)
 
     def on_connect(dev:Device):
         global device
         device = dev
-        pa.on_connect_cb(dev)
+        advertiser.on_connect_cb(dev)
 
     ph.set_on_connect(on_connect)
-    ph.set_on_disconnect(pa.on_disconnect_cb)
+    ph.set_on_disconnect(advertiser.on_disconnect_cb)
 
     # device info service
-    dev_info_serv = BleService("00000900-0000-1000-0000-009132591325", "Device Info")
-    ph.add_service(dev_info_serv)
-    ph.add_char(dev_info_serv, BleChar("2A29", "Manufacturer Name",       "Google"))
-    ph.add_char(dev_info_serv, BleChar("2A24", "Model Number",            "Nexus 5x"))
-    ph.add_char(dev_info_serv, BleChar("2A25", "Serial Number",           "12345678"))
-    ph.add_char(dev_info_serv, BleChar("2A27", "Hardware Revision",       "HW 1.0"))
-    ph.add_char(dev_info_serv, BleChar("2A26", "Firmware Revision",       "FW 1.0"))
-    ph.add_char(dev_info_serv, BleChar("2A28", "Software Revision",       "1.0.0"))
-    ph.add_char(dev_info_serv, BleChar("2A23", "System ID",               bytes(8)))
-    ph.add_char(dev_info_serv, BleChar("2A50", "PNP ID",                  bytes(7)))
-    ph.add_char(dev_info_serv, BleChar("2A2A", "Certification Data List", bytes(0)))
+    if args.carelink is None:
+        # mobile devices define this with a custom service UUID
+        dev_info_serv = BleService("00000900-0000-1000-0000-009132591325", "Device Info")
+        ph.add_service(dev_info_serv)
+        ph.add_char(dev_info_serv, BleChar("2A29", "Manufacturer Name",       "Google"))
+        ph.add_char(dev_info_serv, BleChar("2A24", "Model Number",            "Nexus 5x"))
+        ph.add_char(dev_info_serv, BleChar("2A25", "Serial Number",           "12345678"))
+        ph.add_char(dev_info_serv, BleChar("2A27", "Hardware Revision",       "HW 1.0"))
+        ph.add_char(dev_info_serv, BleChar("2A26", "Firmware Revision",       "FW 1.0"))
+        ph.add_char(dev_info_serv, BleChar("2A28", "Software Revision",       "1.0.0"))
+        ph.add_char(dev_info_serv, BleChar("2A23", "System ID",               bytes(8)))
+        ph.add_char(dev_info_serv, BleChar("2A50", "PNP ID",                  bytes(7)))
+        ph.add_char(dev_info_serv, BleChar("2A2A", "Certification Data List", bytes(0)))
+    else:
+        # CareLink devices define this with the standard service UUID
+        #
+        # NOTE: BlueZ started adding its own Device Info Service to the GATT
+        #       table at some point. Defining our own service does not amend
+        #       the existing one. Instead, there will be *two* services. And
+        #       since both of them use the same UUID, this trips up the pump
+        #       (and likely other devices).
+        #
+        #       In the Bluetooth config file, set `DeviceID = false` in the
+        #       [General] section to deactivate BlueZ's default service. Note
+        #       that this option did not properly work before BlueZ 5.57!
+        dev_info_serv = BleService("180a", "Device Info")
+        ph.add_service(dev_info_serv)
+        ph.add_char(dev_info_serv, BleChar("2A29", "Manufacturer Name",       "Medtronic, Inc."))
+        ph.add_char(dev_info_serv, BleChar("2A24", "Model Number",            "PC 1"))
+        ph.add_char(dev_info_serv, BleChar("2A25", "Serial Number",           "PC3.13.0"))
+        ph.add_char(dev_info_serv, BleChar("2A27", "Hardware Revision",       "1.0A"))
+        ph.add_char(dev_info_serv, BleChar("2A26", "Firmware Revision",       "3.13.0"))
+        ph.add_char(dev_info_serv, BleChar("2A28", "Software Revision",       "1.0S"))
+        ph.add_char(dev_info_serv, BleChar("2A23", "System ID",               bytes.fromhex("00 23 F7 FF FE 00 40 49")))
+        ph.add_char(dev_info_serv, BleChar("2A50", "PNP ID",                  bytes.fromhex("01 F9 01 30 35 33 37")))
+        ph.add_char(dev_info_serv, BleChar("2A2A", "Certification Data List", bytes(0)))
 
     # SAKE service
     sake_serv = BleService("FE82", "Sake Service")
@@ -326,7 +390,7 @@ def main():
     ph.add_char(sake_serv, sake_port)
 
     # finally before calling bluezero, start our advertisement and main logic thread
-    pa.start_adv()
+    advertiser.start_adv()
 
     logic_thread = threading.Thread(
         target=main_logic,
