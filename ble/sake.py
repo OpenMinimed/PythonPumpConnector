@@ -8,8 +8,30 @@ from pysake.constants import KEYDB_PUMP_EXTRACTED
 from utils.singleton import Singleton
 
 class SakeHandler(metaclass=Singleton):
+    """
+    Handle GATT setup for SAKE characteristic and its communication
 
+    The SAKE characteristic has the sole purpose of passing handshake messages
+    between the pump and us. The pump sends us messages by writing to our SAKE
+    characteristic. We transmit messages by sending notifications for the same
+    characteristic. This works by just setting the characteristic's value. The
+    underlying GATT mechanism will then send the notification for us.
+
+    This, of course, only makes sense if the pump has already subscribed to
+    receiving these notifications. We use this action of subscribing to
+    initialize the SAKE handshake.
+
+    We also wire up the actual SAKE server that evaluates incoming messages
+    and generates responses. The SAKE server is not at all involved in the
+    GATT communication. It just operates on the message data. We, on the other
+    hand, are not involved in processing the messages. We just handle their
+    transport.
+    """
+
+    # whether the pump is already subscribed to our SAKE characteristic
     pump_enabled: bool = False
+
+    # the SAKE characteristic
     char = None
 
     def __init__(self):
@@ -38,9 +60,21 @@ class SakeHandler(metaclass=Singleton):
 
     # region thread safe apis
     def notify_callback(self, is_notifying: bool, char):
+        """
+        GATT notification callback
+
+        This gets called when the client subscribes to the SAKE characteristic
+        or unsubscribes from it.
+        """
         self._callback_queue.put(("notify", is_notifying, char))
 
     def write_callback(self, value: bytearray, options: dict):
+        """
+        GATT write callback
+
+        This gets called when the client writes a message to the SAKE
+        characteristic, i.e. when we receive a SAKE message.
+        """
         self._callback_queue.put(("write", bytes(value), options))
 
     def _send(self, data: bytes):
@@ -54,6 +88,7 @@ class SakeHandler(metaclass=Singleton):
 
     # region actual logic
     def _handle_notify(self, is_notifying: bool, char):
+        """Handle pump's request to start/stop receiving notifications from us"""
 
         self.logger.debug(f"got a sake notification start/stop request!")
         
@@ -64,22 +99,29 @@ class SakeHandler(metaclass=Singleton):
         if is_notifying and not self.pump_enabled:
             self.logger.warning("pump wants to be friends with us!")
             self.pump_enabled = True
+            # Initiate the SAKE handshake by sending an all-zeros message.
+            # This will trigger the SAKE client on the pump to send a message
+            # back to us.
             zeroes = bytes(20)
-            self._send(zeroes) # trigger sake client on the pump
-            # self.server.handshake(zeroes) DONT feed it here!
+            self._send(zeroes)
 
         if not is_notifying:
             self.pump_enabled = False
             self.logger.error("pump disabled notifications!")
 
     def _handle_write(self, value: bytes, options: dict):
+        """Handle incoming SAKE messages"""
+
         value = bytes(value)
         self.logger.debug(f"sake write callback received: {value.hex()}")
-        
+
+        # If we have already completed the handshake, we do not expect any
+        # more messages from the SAKE client. So just ignore them.
         if self.server.get_stage() == 6:
             self.logger.warning(f"preventing sake-reset to get into handshake steps!")
             return
 
+        # let SAKE server process the incoming message and generate a response 
         output = self.server.handshake(value)
 
         if output is None and self.server.get_stage() == 6:
@@ -99,10 +141,12 @@ class SakeHandler(metaclass=Singleton):
                 kind = item[0]
 
                 if kind == "notify":
+                    # handle client's subscription/unsubscription
                     _, is_notifying, char = item
                     self._handle_notify(is_notifying, char)
 
                 elif kind == "write":
+                    # handle SAKE message received from client
                     _, value, options = item
                     self._handle_write(value, options)
 
