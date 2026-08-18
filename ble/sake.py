@@ -117,14 +117,14 @@ class SakeHandler(metaclass=Singleton):
 
         # If we have already completed the handshake, we do not expect any
         # more messages from the SAKE client. So just ignore them.
-        if self.server.get_stage() == 6:
+        if self.is_done():
             self.logger.warning(f"preventing sake-reset to get into handshake steps!")
             return
 
         # let SAKE server process the incoming message and generate a response 
         output = self.server.handshake(value)
 
-        if output is None and self.server.get_stage() == 6:
+        if output is None and self.is_done():
             self.logger.info("SAKE HANDSHAKE IS DONE!!! CONGRATULATIONS!")
         else:
             self._send(output)
