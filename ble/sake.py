@@ -29,7 +29,7 @@ class SakeHandler(metaclass=Singleton):
     """
 
     # whether the pump is already subscribed to our SAKE characteristic
-    pump_enabled: bool = False
+    pump_subscribed: bool = False
 
     # the SAKE characteristic
     char = None
@@ -87,7 +87,7 @@ class SakeHandler(metaclass=Singleton):
         return self.server.get_stage() == 6
 
     # region actual logic
-    def _handle_notify(self, is_notifying: bool, char):
+    def _handle_subscribe(self, is_notifying: bool, char):
         """Handle pump's request to start/stop receiving notifications from us"""
 
         self.logger.debug(f"got a sake notification start/stop request!")
@@ -96,9 +96,9 @@ class SakeHandler(metaclass=Singleton):
             self.logger.info(f"sake char is first seen as {char}")
             self.char = char
 
-        if is_notifying and not self.pump_enabled:
+        if is_notifying and not self.pump_subscribed:
             self.logger.warning("pump wants to be friends with us!")
-            self.pump_enabled = True
+            self.pump_subscribed = True
             # Initiate the SAKE handshake by sending an all-zeros message.
             # This will trigger the SAKE client on the pump to send a message
             # back to us.
@@ -106,10 +106,10 @@ class SakeHandler(metaclass=Singleton):
             self._send(zeroes)
 
         if not is_notifying:
-            self.pump_enabled = False
+            self.pump_subscribed = False
             self.logger.error("pump disabled notifications!")
 
-    def _handle_write(self, value: bytes, options: dict):
+    def _handle_receive(self, value: bytes, options: dict):
         """Handle incoming SAKE messages"""
 
         value = bytes(value)
@@ -143,12 +143,12 @@ class SakeHandler(metaclass=Singleton):
                 if kind == "notify":
                     # handle client's subscription/unsubscription
                     _, is_notifying, char = item
-                    self._handle_notify(is_notifying, char)
+                    self._handle_subscribe(is_notifying, char)
 
                 elif kind == "write":
                     # handle SAKE message received from client
                     _, value, options = item
-                    self._handle_write(value, options)
+                    self._handle_receive(value, options)
 
                 else:
                     raise RuntimeError(f"Unknown callback type: {kind}")
