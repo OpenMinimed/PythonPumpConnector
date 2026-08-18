@@ -80,7 +80,7 @@ class SakeHandler(metaclass=Singleton):
 
     def _send(self, data: bytes):
         if self.char is None:
-            raise RuntimeError("Sake char is none! You forgot to call set_char()!")
+            raise RuntimeError("SAKE characteristic not set")
         self._sender_queue.put(data)
         return
     
@@ -94,10 +94,10 @@ class SakeHandler(metaclass=Singleton):
     def _handle_subscribe(self, is_notifying: bool, char):
         """Handle pump's request to start/stop receiving notifications from us"""
 
-        self.logger.debug(f"got a sake notification start/stop request!")
-        
+        self.logger.debug(f"Receiving SAKE notification start/stop request")
+
         if self.char is None:
-            self.logger.info(f"sake char is first seen as {char}")
+            self.logger.info(f"Setting SAKE characteristic: {char}")
             self.char = char
 
         if is_notifying and not self.pump_subscribed:
@@ -106,6 +106,7 @@ class SakeHandler(metaclass=Singleton):
             # Initiate the SAKE handshake by sending an all-zeros message.
             # This will trigger the SAKE client on the pump to send a message
             # back to us.
+            self.logger.info("Initiating SAKE handshake")
             zeroes = bytes(20)
             self._send(zeroes)
 
@@ -117,12 +118,12 @@ class SakeHandler(metaclass=Singleton):
         """Handle incoming SAKE messages"""
 
         value = bytes(value)
-        self.logger.debug(f"sake write callback received: {value.hex()}")
+        self.logger.debug(f"RX: {value.hex()}")
 
         # If we have already completed the handshake, we do not expect any
         # more messages from the SAKE client. So just ignore them.
         if self.is_done():
-            self.logger.warning(f"preventing sake-reset to get into handshake steps!")
+            self.logger.warning(f"Handshake already completed. Ignoring unexpected message.")
             return
 
         # let SAKE server process the incoming message and generate a response 
@@ -169,11 +170,12 @@ class SakeHandler(metaclass=Singleton):
                 data = self._sender_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
+
             try:
+                self.logger.debug(f"TX: {data.hex()}")
                 self.char.set_value(list(data))
-                self.logger.debug(f"sent data on sake port: {data.hex()}")
             except Exception as e:
-                self.logger.exception(f"sake tx failed: {e}")
+                self.logger.exception(f"Sending SAKE message failed: {e}")
 
     #endregion
 
