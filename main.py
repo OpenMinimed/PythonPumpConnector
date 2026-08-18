@@ -17,6 +17,10 @@ from bluezero.central import Central
 from utils.log_manager import LogManager
 LogManager.init(level=logging.DEBUG)
 
+# bluezero is rather noisy, so let's turn down its log levels a bit
+logging.getLogger("bluezero").setLevel(logging.INFO)
+logging.getLogger("bluezero.GATT").setLevel(logging.WARNING)
+
 from ble.advertiser import Advertiser
 from ble.mobile_advertiser import MobileAdvertiser
 from ble.carelink_advertiser import CareLinkAdvertiser
