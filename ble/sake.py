@@ -58,7 +58,8 @@ class SakeHandler(metaclass=Singleton):
         self.server = SakeServer(KEYDB_PUMP_EXTRACTED)
         return
 
-    # region thread safe apis
+    #region thread-safe APIs
+
     def notify_callback(self, is_notifying: bool, char):
         """
         GATT notification callback
@@ -86,7 +87,10 @@ class SakeHandler(metaclass=Singleton):
     def is_done(self) -> bool:
         return self.server.get_stage() == 6
 
-    # region actual logic
+    #endregion
+
+    #region actual logic
+
     def _handle_subscribe(self, is_notifying: bool, char):
         """Handle pump's request to start/stop receiving notifications from us"""
 
@@ -170,6 +174,8 @@ class SakeHandler(metaclass=Singleton):
                 self.logger.debug(f"sent data on sake port: {data.hex()}")
             except Exception as e:
                 self.logger.exception(f"sake tx failed: {e}")
+
+    #endregion
 
     # def close(self):
     #     self._stop_evt.set()
