@@ -2,8 +2,10 @@ import threading
 import queue
 
 from utils.log_manager import LogManager
-from pysake.server import SakeServer
-from pysake.constants import KEYDB_PUMP_EXTRACTED
+# TODO testing only: run the protocol-v2 (passkey/SRP-6a) server instead of the
+# v1 challenge/CMAC one. Swap back to SakeServer(KEYDB_PUMP_EXTRACTED) for
+# legacy pumps. The passkey defaults to the hardcoded TEST_PASSKEY.
+from pysake.v2 import SakeV2Server as SakeServer
 
 from utils.singleton import Singleton
 
@@ -55,7 +57,7 @@ class SakeHandler(metaclass=Singleton):
         )
         self._cb_thread.start()
 
-        self.server = SakeServer(KEYDB_PUMP_EXTRACTED)
+        self.server = SakeServer()
         return
 
     #region thread-safe APIs
@@ -85,7 +87,7 @@ class SakeHandler(metaclass=Singleton):
         return
     
     def is_done(self) -> bool:
-        return self.server.get_stage() == 6
+        return self.server.is_done()
 
     #endregion
 
@@ -129,10 +131,11 @@ class SakeHandler(metaclass=Singleton):
         # let SAKE server process the incoming message and generate a response 
         output = self.server.handshake(value)
 
-        if output is None and self.is_done():
-            self.logger.info("SAKE HANDSHAKE IS DONE!!! CONGRATULATIONS!")
-        else:
+        if output is not None:
             self._send(output)
+
+        if self.is_done():
+            self.logger.info("SAKE HANDSHAKE IS DONE!!! CONGRATULATIONS!")
 
     # region slave threads
     def _thread_callback(self):
