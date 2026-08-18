@@ -37,7 +37,7 @@ class Advertiser(metaclass=ABCMeta):
 
     def __init__(self, adv_name: str, instance_id: int = 1):
         """
-        adv_name:    name for advertising
+        adv_name:    device name used in advertising
         instance_id: the bluez instance id
         """
 

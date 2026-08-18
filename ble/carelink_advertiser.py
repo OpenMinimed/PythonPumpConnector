@@ -8,7 +8,7 @@ class CareLinkAdvertiser(Advertiser):
 
     def __init__(self, adv_name: str, adapter_addr: str, confirmation_code: int):
         """
-        adv_name:          name for advertising
+        adv_name:          device name used in advertising
         adapter_addr:      MAC address of Bluetooth adapter in use
         confirmation_code: 6-digit pump confirmation code
         """

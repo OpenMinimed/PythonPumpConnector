@@ -11,8 +11,8 @@ class MobileAdvertiser(Advertiser):
 
     def __init__(self, adv_name: str, already_paired: bool = False):
         """
-        adv_name:       name for advertising
-        already_paired: to advertise on the other uuid with a bit flip
+        adv_name:       device name used in advertising
+        already_paired: whether we are trying to reconnect to an already paired pump
         """
 
         self.logger = LogManager.get_logger(self.__class__.__name__)
