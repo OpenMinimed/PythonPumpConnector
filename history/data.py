@@ -997,6 +997,7 @@ class AnnunciationData(HistoryEventData):
         ]:
             assert self.event_flags & AnnunciationEventFlag.AUXINFO3_PRESENT
             d["days_since_set_change"], data = ParseUtils.consume_u8(data)
+            _,                          data = ParseUtils.consume_u8(data)
         elif self.annunciation_type in [
             AnnunciationType.CHECK_BOLUS_BG_ALERT,
         ]:
