@@ -117,14 +117,22 @@ class CgmMiscData(GATTBase):
         delta = timedelta(hours=rt)
         end = st + delta
 
-        toret = end - datetime.now()
-        toret_hours = toret.total_seconds() / 3600
+        remaining = end - datetime.now()
 
-        sign    = "-" if toret_hours < 0 else ""
-        hours   = abs(int(toret_hours))
-        minutes = abs(int((toret_hours - hours) * 60))
-        self.logger.info(f"remaining time until sensor expires = {sign}{hours}:{minutes:02d}")
-        return toret_hours
+        t = remaining.total_seconds()
+        is_negative = t < 0
+        t = abs(int(t))
+        days,    t = divmod(t, 60*60*24)
+        hours,   t = divmod(t, 60*60)
+        minutes, t = divmod(t, 60)
+
+        t_str = f"{days}d {hours:02d}h {minutes:02d}m"
+        if is_negative:
+            t_str = f"-({t_str})"
+        self.logger.info(f"remaining time until sensor expires = {t_str}")
+
+        time_in_hours = remaining.total_seconds() / 3600
+        return time_in_hours
 
     def get_features(self):
         self.logger.info("Reading CGM Feature")
