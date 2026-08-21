@@ -33,7 +33,7 @@ class CgmStartTime():
         tz,          raw = ParseUtils.consume_i8(raw)
         dst,         raw = ParseUtils.consume_u8(raw)
 
-        if tz != -128: # time zone offset must no be unknown
+        if tz != -128: # time zone offset must not be unknown
             self.timeZoneOffset = tz * 15
 
         if dst != 0xff: # DST offset must not be unknown
