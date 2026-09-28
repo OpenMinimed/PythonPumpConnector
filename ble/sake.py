@@ -2,10 +2,12 @@ import threading
 import queue
 
 from utils.log_manager import LogManager
-# TODO testing only: run the protocol-v2 (passkey/SRP-6a) server instead of the
-# v1 challenge/CMAC one. Swap back to SakeServer(KEYDB_PUMP_EXTRACTED) for
-# legacy pumps. The passkey defaults to the hardcoded TEST_PASSKEY.
-from pysake.v2 import SakeV2Server as SakeServer
+from pysake.server import SakeServer as SakeV1Server
+from pysake.constants import KEYDB_PUMP_EXTRACTED
+# NOTE: pysake.v2 is NOT validated against a real pump -- it's a
+# self-consistent protocol-shaped demo only. See the status comment at the
+# top of pysake/v2.py before relying on it for anything but local testing.
+from pysake.v2 import SakeV2Server
 
 from utils.singleton import Singleton
 
@@ -36,7 +38,13 @@ class SakeHandler(metaclass=Singleton):
     # the SAKE characteristic
     char = None
 
-    def __init__(self):
+    def __init__(self, use_sake_v2: bool = False, v2_passkey: int | None = None):
+        """
+        use_sake_v2: run the unvalidated protocol-v2 (passkey/SRP-6a) server
+        instead of the real v1 challenge/CMAC one. See pysake/v2.py's status
+        comment -- it will NOT pair with a real pump, it's for local/protocol
+        development only. Defaults to the real v1 server.
+        """
         self.logger = LogManager.get_logger(self.__class__.__name__)
 
         self._sender_queue = queue.Queue()
@@ -57,7 +65,15 @@ class SakeHandler(metaclass=Singleton):
         )
         self._cb_thread.start()
 
-        self.server = SakeServer()
+        if use_sake_v2:
+            self.logger.warning(
+                "running the UNVALIDATED protocol-v2 (passkey/SRP-6a) SAKE "
+                "server -- this will not pair with a real pump, see "
+                "pysake/v2.py"
+            )
+            self.server = SakeV2Server(v2_passkey)
+        else:
+            self.server = SakeV1Server(KEYDB_PUMP_EXTRACTED)
         return
 
     #region thread-safe APIs

@@ -282,6 +282,16 @@ def main():
         help='Connect to pump as CareLink device using the confirmation code CODE')
     parser.add_argument('-a', '--adapter-address',
         help='MAC address of the Bluetooth adapter to use')
+    parser.add_argument('--sake-v2',
+        action='store_true',
+        help='Use the UNVALIDATED protocol-v2 (passkey/SRP-6a) SAKE server '
+             'instead of the real v1 one. This is for local protocol '
+             'development only -- it will not pair with a real pump. See '
+             'pysake/v2.py for details.')
+    parser.add_argument('--sake-v2-passkey',
+        type=confirmation_code,
+        default=None,
+        help='Passkey to use with --sake-v2 (default: hardcoded test passkey).')
     args = parser.parse_args()
 
     # check if bt is even on
@@ -317,7 +327,7 @@ def main():
         # use first Bluetooth adapter found
         adapter_addr = next(adapter.Adapter.available()).address
 
-    sh = SakeHandler()
+    sh = SakeHandler(use_sake_v2=args.sake_v2, v2_passkey=args.sake_v2_passkey)
     ph = PeripheralHandler(adapter_addr)
 
     if args.reconnect:
