@@ -292,9 +292,9 @@ def main():
         action='store_true',
         help='Use the protocol-v2 (passkey/SRP-6a) SAKE server instead of '
              'the v1 one. Runs the real libandroid-sake-lib.so engine (see '
-             'ble/sake_v2_engine.py); without --sake-v2-permit-keys pointing '
-             'at real per-pump key material this will not pair with an '
-             'actual pump.')
+             'ble/sake_v2_engine.py). Permit key material defaults to the '
+             'real values already in KEYDB_PUMP_EXTRACTED -- see '
+             '--sake-v2-permit-keys to override.')
     parser.add_argument('--sake-v2-passkey',
         type=confirmation_code,
         default=None,
@@ -303,12 +303,9 @@ def main():
         metavar='FILE',
         default=None,
         help='Path to a JSON file overriding permit key material for '
-             '--sake-v2: {"our_decrypt_key": "<32 hex chars>", "our_mac_key": '
-             '"...", "peer_decrypt_key": "...", "peer_mac_key": "..."}, any '
-             'subset. our_decrypt_key/our_mac_key already default to real '
-             'values (from KEYDB_PUMP_EXTRACTED); peer_decrypt_key/'
-             'peer_mac_key default to placeholders and are the only fields '
-             'that actually need overriding once sourced -- see '
+             '--sake-v2: {"decrypt_key": "<32 hex chars>", "mac_key": "...", '
+             '"outgoing_ciphertext": "..."}, any subset. All three already '
+             'default to the real values in KEYDB_PUMP_EXTRACTED -- see '
              'ble/sake_v2_engine.py.')
     args = parser.parse_args()
 
