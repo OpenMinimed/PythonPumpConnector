@@ -291,13 +291,22 @@ def main():
     parser.add_argument('--sake-v2',
         action='store_true',
         help='Use the protocol-v2 (passkey/SRP-6a) SAKE server instead of '
-             'the v1 one. Currently uses pysake.v2, a superseded generic-'
-             'SRP-library implementation that does not pair with a pump. '
-             'See pysake/v2.py for details.')
+             'the v1 one. Runs the real libandroid-sake-lib.so engine (see '
+             'ble/sake_v2_engine.py); without --sake-v2-permit-keys pointing '
+             'at real per-pump key material this will not pair with an '
+             'actual pump.')
     parser.add_argument('--sake-v2-passkey',
         type=confirmation_code,
         default=None,
         help='Passkey to use with --sake-v2 (default: hardcoded test passkey).')
+    parser.add_argument('--sake-v2-permit-keys',
+        metavar='FILE',
+        default=None,
+        help='Path to a JSON file with real per-pump permit key material for '
+             '--sake-v2: {"our_decrypt_key": "<32 hex chars>", "our_mac_key": '
+             '"...", "peer_decrypt_key": "...", "peer_mac_key": "..."}. '
+             'Without this, --sake-v2 uses placeholder test values and will '
+             'not pair with a real pump -- see ble/sake_v2_engine.py.')
     args = parser.parse_args()
 
     # check if bt is even on
@@ -333,7 +342,16 @@ def main():
         # use first Bluetooth adapter found
         adapter_addr = next(adapter.Adapter.available()).address
 
-    sh = SakeHandler(use_sake_v2=args.sake_v2, v2_passkey=args.sake_v2_passkey)
+    v2_permit_keys = None
+    if args.sake_v2_permit_keys:
+        import json
+        from ble.sake_v2_engine import PermitKeys
+        with open(args.sake_v2_permit_keys) as f:
+            raw = json.load(f)
+        v2_permit_keys = PermitKeys(**{k: bytes.fromhex(v) for k, v in raw.items()})
+
+    sh = SakeHandler(use_sake_v2=args.sake_v2, v2_passkey=args.sake_v2_passkey,
+                      v2_permit_keys=v2_permit_keys)
     ph = PeripheralHandler(adapter_addr)
 
     if args.reconnect:

@@ -101,7 +101,7 @@ class CgmMiscData(GATTBase):
             return None
         read = bytes(read)
         self.logger.debug(f"read raw on cgm start time = {read.hex()}")
-        plain = self.sh.server.session.server_crypt.decrypt(read)
+        plain = self.sh.decrypt(read)
         if not ValueConverter.check_crc(plain):
             self.logger.error("crc mismatch on start time!")
             return None

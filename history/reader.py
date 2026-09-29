@@ -262,7 +262,7 @@ class HistoryReader(GATTBase):
         if "Value" in changed_props:
             value = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
             self.logger.debug("IDD History Data notification: " + value.hex())
-            data = self.sh.server.session.server_crypt.decrypt(value)
+            data = self.sh.decrypt(value)
             self.records.append(data)
             self.last_message_time = time.time()
             self.data_finished.set()

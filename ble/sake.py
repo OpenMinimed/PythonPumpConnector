@@ -4,13 +4,14 @@ import queue
 from utils.log_manager import LogManager
 from pysake.server import SakeServer as SakeV1Server
 from pysake.constants import KEYDB_PUMP_EXTRACTED
-# NOTE: pysake.v2's generic-SRP-library approach is superseded -- see the
-# module docstring at the top of pysake/v2.py and
-# PythonSake/tools/sake_v260_emulate/README.md. The real protocol-v2 engine
-# (running libandroid-sake-lib.so itself) proves out the SRP-6a core, but
-# is not yet wired in here as a persistent, connector-callable client --
-# that's the remaining step before --sake-v2 can pair with a pump.
-from pysake.v2 import SakeV2Server
+# pysake.v2's generic-SRP-library approach is retired -- see the module
+# docstring at the top of pysake/v2.py. --sake-v2 now runs
+# ble.sake_v2_engine.SakeV2EngineAdapter instead, which drives the real
+# Medtronic libandroid-sake-lib.so (v260) via PythonSake's
+# tools/sake_v260_emulate -- see that module's docstring and README for
+# status (handshake + secure messaging both proven working; real per-pump
+# permit key material still needed to actually pair with a pump).
+from ble.sake_v2_engine import SakeV2EngineAdapter, PermitKeys
 
 from utils.singleton import Singleton
 
@@ -41,16 +42,19 @@ class SakeHandler(metaclass=Singleton):
     # the SAKE characteristic
     char = None
 
-    def __init__(self, use_sake_v2: bool = False, v2_passkey: int | None = None):
+    def __init__(self, use_sake_v2: bool = False, v2_passkey: int | None = None,
+                 v2_permit_keys: PermitKeys | None = None):
         """
         use_sake_v2: run the protocol-v2 (passkey/SRP-6a) server instead of
-        the v1 challenge/CMAC one. This currently uses pysake.v2's generic
-        SRP-library implementation, which is superseded and does not pair
-        with a pump -- see the module docstring at the top of pysake/v2.py.
-        Defaults to the v1 server, which is what pairs with a real pump
-        today.
+        the v1 challenge/CMAC one, via ble.sake_v2_engine.SakeV2EngineAdapter
+        (the real libandroid-sake-lib.so v260, emulated). Defaults to the v1
+        server, which is what pairs with a real pump today -- v2 still needs
+        real per-pump permit key material to do the same; see
+        ble/sake_v2_engine.py.
         """
         self.logger = LogManager.get_logger(self.__class__.__name__)
+        self.use_sake_v2 = use_sake_v2
+        self._v2_permit_keys = v2_permit_keys
 
         self._sender_queue = queue.Queue()
         self._callback_queue = queue.Queue()
@@ -73,13 +77,25 @@ class SakeHandler(metaclass=Singleton):
         if use_sake_v2:
             self.logger.warning(
                 "running the protocol-v2 (passkey/SRP-6a) SAKE server via "
-                "pysake.v2's superseded generic-SRP-library implementation "
-                "-- this does not pair with a pump, see pysake/v2.py"
+                "the real libandroid-sake-lib.so engine -- see "
+                "ble/sake_v2_engine.py for current status"
             )
-            self.server = SakeV2Server(v2_passkey)
+            self.server = SakeV2EngineAdapter(v2_passkey, permit_keys=v2_permit_keys)
         else:
             self.server = SakeV1Server(KEYDB_PUMP_EXTRACTED)
         return
+
+    def encrypt(self, data: bytes) -> bytes:
+        """Encrypt a post-handshake payload to send to the pump."""
+        if self.use_sake_v2:
+            return self.server.encrypt(data)
+        return self.server.session.server_crypt.encrypt(data)
+
+    def decrypt(self, data: bytes) -> bytes:
+        """Decrypt a post-handshake payload received from the pump."""
+        if self.use_sake_v2:
+            return self.server.decrypt(data)
+        return self.server.session.server_crypt.decrypt(data)
 
     #region thread-safe APIs
 
@@ -126,12 +142,16 @@ class SakeHandler(metaclass=Singleton):
         if is_notifying and not self.pump_subscribed:
             self.logger.warning("pump wants to be friends with us!")
             self.pump_subscribed = True
-            # Initiate the SAKE handshake by sending an all-zeros message.
-            # This will trigger the SAKE client on the pump to send a message
-            # back to us.
+            # Initiate the SAKE handshake. v1's first server->client message
+            # happens to always be 20 zero bytes; v2's depends on the engine
+            # state (passkey, key database), so ask it directly instead of
+            # assuming the same hardcoded bytes.
             self.logger.info("Initiating SAKE handshake")
-            zeroes = bytes(20)
-            self._send(zeroes)
+            if self.use_sake_v2:
+                kickoff = self.server.initial_message()
+            else:
+                kickoff = bytes(20)
+            self._send(kickoff)
 
         if not is_notifying:
             self.pump_subscribed = False

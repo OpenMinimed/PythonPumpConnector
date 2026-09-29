@@ -96,7 +96,7 @@ class SocpController(GATTBase):
         crc = crc.to_bytes(2, "little")
         req += crc
 
-        ciph = self.sh.server.session.server_crypt.encrypt(req)
+        ciph = self.sh.encrypt(req)
         self.logger.debug(f"writing {req.hex()} (encrypted: {ciph.hex()}) to socp...")
         self.socp_char.write_value(list(ciph))
 
@@ -116,6 +116,6 @@ class SocpController(GATTBase):
         if "Value" in changed_props:
             ciph = bytes(dbus_tools.dbus_to_python(changed_props["Value"]))
             self.logger.debug("SOCP callback: " + ciph.hex())
-            self.last_value = self.sh.server.session.server_crypt.decrypt(ciph)
+            self.last_value = self.sh.decrypt(ciph)
             self.resp_received.set()
         return

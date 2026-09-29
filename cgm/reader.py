@@ -78,7 +78,7 @@ class SGReader(GATTBase):
 
         # decrypt the record
         #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ...")
-        data = self.sh.server.session.server_crypt.decrypt(bytes(self.record))
+        data = self.sh.decrypt(bytes(self.record))
         #self.logger.debug("Decrypting: " + bytes(self.record).hex() + " ... DONE")
 
         # parse received record

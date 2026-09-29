@@ -37,7 +37,7 @@ class IDDFeaturesReader(GATTBase):
         self.logger.debug("IDD Features: " + value.hex())
 
         # SAKE-decrypt the value
-        data = self.sh.server.session.server_crypt.decrypt(value)
+        data = self.sh.decrypt(value)
 
         pump_features = PumpFeatures(data)
         if pump_features.parse():

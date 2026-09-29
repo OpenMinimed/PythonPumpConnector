@@ -95,14 +95,14 @@ class SecureControlPoint(GATTBase):
         self.logger.debug(f"Sending public key, exchange_id={exchange_id}: {request.hex()}")
 
         self._operation_finished.clear()
-        ciph = self.sh.server.session.server_crypt.encrypt(request)
+        ciph = self.sh.encrypt(request)
         self.char.write_value(ciph)
 
         if not self._operation_finished.wait(timeout=timeout):
             self.logger.error("Timeout while waiting for Confirm Data")
             return False
 
-        data = self.sh.server.session.server_crypt.decrypt(self._response)
+        data = self.sh.decrypt(self._response)
         self._response = None
 
         if len(data) < 4:

@@ -148,7 +148,7 @@ class IDDStatusReader(GATTBase):
         self.logger.debug("IDD Status: " + value.hex())
 
         # SAKE-decrypt the value
-        data = self.sh.server.session.server_crypt.decrypt(value)
+        data = self.sh.decrypt(value)
 
         pump_status = PumpStatus(data)
         if pump_status.parse():
@@ -184,7 +184,7 @@ class IDDStatusReader(GATTBase):
         self.logger.debug(f"Sending request: {request.hex()}")
 
         # SAKE-encrypt and send
-        ciph = self.sh.server.session.server_crypt.encrypt(request)
+        ciph = self.sh.encrypt(request)
         self.idd_srcp.write_value(ciph)
 
         # wait for the response
@@ -195,7 +195,7 @@ class IDDStatusReader(GATTBase):
             return None
 
         # decrypt the response
-        data = self.sh.server.session.server_crypt.decrypt(self.response)
+        data = self.sh.decrypt(self.response)
         self.response = None
         return data
 
