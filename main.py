@@ -290,10 +290,10 @@ def main():
         help='MAC address of the Bluetooth adapter to use')
     parser.add_argument('--sake-v2',
         action='store_true',
-        help='Use the UNVALIDATED protocol-v2 (passkey/SRP-6a) SAKE server '
-             'instead of the real v1 one. This is for local protocol '
-             'development only -- it will not pair with a real pump. See '
-             'pysake/v2.py for details.')
+        help='Use the protocol-v2 (passkey/SRP-6a) SAKE server instead of '
+             'the v1 one. Currently uses pysake.v2, a superseded generic-'
+             'SRP-library implementation that does not pair with a pump. '
+             'See pysake/v2.py for details.')
     parser.add_argument('--sake-v2-passkey',
         type=confirmation_code,
         default=None,

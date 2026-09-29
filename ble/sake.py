@@ -4,9 +4,12 @@ import queue
 from utils.log_manager import LogManager
 from pysake.server import SakeServer as SakeV1Server
 from pysake.constants import KEYDB_PUMP_EXTRACTED
-# NOTE: pysake.v2 is NOT validated against a real pump -- it's a
-# self-consistent protocol-shaped demo only. See the status comment at the
-# top of pysake/v2.py before relying on it for anything but local testing.
+# NOTE: pysake.v2's generic-SRP-library approach is superseded -- see the
+# module docstring at the top of pysake/v2.py and
+# PythonSake/tools/sake_v260_emulate/README.md. The real protocol-v2 engine
+# (running libandroid-sake-lib.so itself) proves out the SRP-6a core, but
+# is not yet wired in here as a persistent, connector-callable client --
+# that's the remaining step before --sake-v2 can pair with a pump.
 from pysake.v2 import SakeV2Server
 
 from utils.singleton import Singleton
@@ -40,10 +43,12 @@ class SakeHandler(metaclass=Singleton):
 
     def __init__(self, use_sake_v2: bool = False, v2_passkey: int | None = None):
         """
-        use_sake_v2: run the unvalidated protocol-v2 (passkey/SRP-6a) server
-        instead of the real v1 challenge/CMAC one. See pysake/v2.py's status
-        comment -- it will NOT pair with a real pump, it's for local/protocol
-        development only. Defaults to the real v1 server.
+        use_sake_v2: run the protocol-v2 (passkey/SRP-6a) server instead of
+        the v1 challenge/CMAC one. This currently uses pysake.v2's generic
+        SRP-library implementation, which is superseded and does not pair
+        with a pump -- see the module docstring at the top of pysake/v2.py.
+        Defaults to the v1 server, which is what pairs with a real pump
+        today.
         """
         self.logger = LogManager.get_logger(self.__class__.__name__)
 
@@ -67,9 +72,9 @@ class SakeHandler(metaclass=Singleton):
 
         if use_sake_v2:
             self.logger.warning(
-                "running the UNVALIDATED protocol-v2 (passkey/SRP-6a) SAKE "
-                "server -- this will not pair with a real pump, see "
-                "pysake/v2.py"
+                "running the protocol-v2 (passkey/SRP-6a) SAKE server via "
+                "pysake.v2's superseded generic-SRP-library implementation "
+                "-- this does not pair with a pump, see pysake/v2.py"
             )
             self.server = SakeV2Server(v2_passkey)
         else:

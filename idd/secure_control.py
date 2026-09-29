@@ -48,9 +48,9 @@ class SecureControlPoint(GATTBase):
         u16 exchange_id      -- echoes the request's
         u8  status           -- 0x00 = valid, 0x01 = invalid
 
-    NOT independently validated against a real pump (no v2-paired device
-    available at RE time) -- this mirrors what the app itself sends/parses,
-    which is the best evidence available short of a live capture.
+    This mirrors what the app itself sends/parses (no live capture against
+    a real pump has confirmed it directly) -- it's the best evidence
+    available short of that.
 
     Like the other "SAKE-encrypted" IDS characteristics, the payload above
     is wrapped in the session's SeqCrypt before writing / after reading --
