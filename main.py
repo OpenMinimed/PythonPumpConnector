@@ -302,11 +302,14 @@ def main():
     parser.add_argument('--sake-v2-permit-keys',
         metavar='FILE',
         default=None,
-        help='Path to a JSON file with real per-pump permit key material for '
+        help='Path to a JSON file overriding permit key material for '
              '--sake-v2: {"our_decrypt_key": "<32 hex chars>", "our_mac_key": '
-             '"...", "peer_decrypt_key": "...", "peer_mac_key": "..."}. '
-             'Without this, --sake-v2 uses placeholder test values and will '
-             'not pair with a real pump -- see ble/sake_v2_engine.py.')
+             '"...", "peer_decrypt_key": "...", "peer_mac_key": "..."}, any '
+             'subset. our_decrypt_key/our_mac_key already default to real '
+             'values (from KEYDB_PUMP_EXTRACTED); peer_decrypt_key/'
+             'peer_mac_key default to placeholders and are the only fields '
+             'that actually need overriding once sourced -- see '
+             'ble/sake_v2_engine.py.')
     args = parser.parse_args()
 
     # check if bt is even on

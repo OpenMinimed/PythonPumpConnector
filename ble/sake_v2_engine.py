@@ -12,14 +12,36 @@ engineered (three separate cases where Ghidra's decompile actively misread
 this library, only resolved by running the real code or reading raw
 disassembly).
 
-What this does NOT yet have: real, per-pump identity-secret material for
-the permit exchange (the four 16-byte AES/CMAC keys in PermitKeys below).
-Those are provisioned per pump, most likely via the IDD Secure Control
-Point (0x0109) / PublicKeyExchangeApiImpl flow this project's Documentation
-repo describes -- not yet reverse engineered to the point of knowing how to
-derive real values from it. Without real values here, this will complete a
-handshake with anything running the same engine (see PythonSake's
-selftest_full_handshake.py) but will NOT pair with a real pump.
+Permit key material status: the exchange needs FOUR 16-byte secrets --
+two pairs, "server's own" (decrypt+mac) and "client's own" (decrypt+mac) --
+and BOTH sides need to know all four (each side decrypts/verifies incoming
+messages with its own pair, and must also know the peer's pair to correctly
+construct outgoing messages addressed to that peer; see PythonSake's README,
+"Solving the permit exchange"). We're the SAKE-protocol-server (see
+CONNECTOR_DEVICE_TYPE below), so:
+
+- our_decrypt_key / our_mac_key = the "server's own" pair. These ARE real:
+  pysake.constants.KEYDB_PUMP_EXTRACTED (already extracted from and proven
+  against a real pump for protocol v1) stores exactly these two 16-byte
+  values, in its StaticKeys.permit_decrypt_key / .permit_auth_key fields --
+  v1 never reads them (it only uses derivation_key/handshake_auth_key/
+  handshake_payload), but they were captured in the same extraction and are
+  the correct real values for v2's permit step too (confirmed structurally:
+  PythonSake's pysake/keys.py already named these fields identically to
+  what this session's independent RE of the v2 permit path found, byte
+  offset for byte offset, before any v2 work started).
+- peer_decrypt_key / peer_mac_key = the "client's (pump's) own" pair. NOT
+  present in KEYDB_PUMP_EXTRACTED -- that database only ever needed to
+  carry our half for v1's symmetric-secret scheme. These remain placeholder
+  values below. Sourcing them is a separate RE task, most likely via the
+  IDD Secure Control Point (0x0109) / PublicKeyExchangeApiImpl flow this
+  project's Documentation repo describes.
+
+Without real peer_* values, this completes a handshake with anything
+running the same engine (see PythonSake's selftest_full_handshake.py) but
+will NOT pair with a real pump -- it fails the permit's self-consistency
+checksum, the same err=18/PERMIT_RECEIVED_INVALID this session's harness
+work debugged at length.
 """
 from dataclasses import dataclass
 import logging
@@ -54,21 +76,39 @@ CONNECTOR_DEVICE_TYPE = 4   # MobileApplication -- we play the SAKE_SERVER role,
                             # running pysake.server.SakeServer (also SERVER).
 
 
+def _real_server_pair():
+    """
+    our_decrypt_key/our_mac_key sourced from the real, pump-extracted
+    pysake.constants.KEYDB_PUMP_EXTRACTED -- see the module docstring above
+    for why these two (and only these two) fields are real.
+    """
+    from pysake.constants import KEYDB_PUMP_EXTRACTED
+    sk = KEYDB_PUMP_EXTRACTED.remote_devices[PUMP_DEVICE_TYPE]
+    return sk.permit_decrypt_key, sk.permit_auth_key
+
+
 @dataclass
 class PermitKeys:
     """
-    The four 16-byte identity secrets the permit exchange needs (see
-    PythonSake's README for the exact protocol). All placeholder-default:
-    NOT real pump key material -- a handshake built from these will only
-    ever complete against another instance using the *same* values (e.g.
-    PythonSake's own selftest), never a real pump.
+    The four 16-byte identity secrets the permit exchange needs (see the
+    module docstring above). our_decrypt_key/our_mac_key default to the
+    real values from KEYDB_PUMP_EXTRACTED. peer_decrypt_key/peer_mac_key
+    are still placeholders -- that secret isn't in KEYDB_PUMP_EXTRACTED and
+    hasn't been sourced elsewhere yet. A handshake built with placeholder
+    peer_* values will only ever complete against another instance using
+    the *same* placeholder values (e.g. PythonSake's own selftest), never a
+    real pump.
     """
-    our_decrypt_key: bytes = bytes(range(0xB0, 0xC0))
-    our_mac_key: bytes = bytes(range(0xD0, 0xE0))
+    our_decrypt_key: bytes = None
+    our_mac_key: bytes = None
     peer_decrypt_key: bytes = bytes(range(0xA0, 0xB0))
     peer_mac_key: bytes = bytes(range(0xC0, 0xD0))
 
     def __post_init__(self):
+        if self.our_decrypt_key is None or self.our_mac_key is None:
+            real_decrypt, real_mac = _real_server_pair()
+            self.our_decrypt_key = self.our_decrypt_key or real_decrypt
+            self.our_mac_key = self.our_mac_key or real_mac
         for f in (self.our_decrypt_key, self.our_mac_key, self.peer_decrypt_key, self.peer_mac_key):
             assert len(f) == 16
 
@@ -78,9 +118,12 @@ class SakeV2EngineAdapter:
         self.logger = LogManager.get_logger(self.__class__.__name__)
         if permit_keys is None:
             self.logger.warning(
-                "SakeV2EngineAdapter: no real permit key material supplied -- "
-                "using placeholder test values. This will NOT pair with a real "
-                "pump. See ble/sake_v2_engine.py's module docstring."
+                "SakeV2EngineAdapter: no --sake-v2-permit-keys supplied -- "
+                "defaulting to our_decrypt_key/our_mac_key from the real "
+                "KEYDB_PUMP_EXTRACTED, but peer_decrypt_key/peer_mac_key are "
+                "still placeholders. This will NOT pair with a real pump "
+                "(the permit's self-consistency checksum will fail). See "
+                "ble/sake_v2_engine.py's module docstring."
             )
             permit_keys = PermitKeys()
 
