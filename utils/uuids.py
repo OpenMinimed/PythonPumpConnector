@@ -27,6 +27,11 @@ class UUID(StrEnum):
     IDD_CHAR_STATUS             = "00000102-0000-1000-0000-009132591325"
     IDD_CHAR_FEATURES           = "00000104-0000-1000-0000-009132591325"
     IDD_CHAR_SRCP               = "00000105-0000-1000-0000-009132591325"
+    # "Secure Control Point": used by the app for the public-key exchange
+    # that runs right after a protocol-v2 (passkey/SRP-6a) SAKE handshake
+    # succeeds -- see idd/secure_control.py and ble/sake.py's SAKE_V2 notes.
+    # Not part of the standard IDS; not used by a normal v1 reconnect.
+    IDD_CHAR_SECURE_CONTROL     = "00000109-0000-1000-0000-009132591325"
     IDD_CHAR_HISTORY_DATA       = "00000108-0000-1000-0000-009132591325"
     IDD_CHAR_GST_BATTERY_LEVEL  = "00000400-0000-1000-0000-009132591325"
     IDD_CHAR_RACP               = "00002a52-0000-1000-8000-00805f9b34fb"

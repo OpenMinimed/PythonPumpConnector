@@ -74,6 +74,7 @@ class ReloadableComponents:
         self.iddstatus   = create("idd.status.reader",   "IDDStatusReader",       self.pump)
         self.iddfeatures = create("idd.features.reader", "IDDFeaturesReader",     self.pump)
         self.iddbattery  = create("idd.gst_battery",     "GSTBatteryLevel",       self.pump)
+        self.securectrl  = create("idd.secure_control",  "SecureControlPoint",    self.pump)
         # NOTE: uses history reader instead of pump
         self.dbm         = create("database.manager",    "DatabaseManager",       self.hr)
 
@@ -166,6 +167,11 @@ def setup_actions():
         ('Read IDD GST Battery Level',                lambda: components.iddbattery.get_value()),
 
         ('IDD status test all calls', lambda: components.iddstatus.test_all()),
+
+        # part of the protocol-v2 (passkey/SRP-6a) pairing flow only -- the
+        # real app sends this right after a v2 SAKE handshake succeeds, see
+        # idd/secure_control.py. Not meaningful after a v1 reconnect.
+        ('Send public key (protocol-v2 pairing step)', lambda: components.securectrl.send_public_key()),
     ]
 
     actions = {
