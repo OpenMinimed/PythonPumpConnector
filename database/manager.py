@@ -15,7 +15,15 @@ class DatabaseManager:
         self._create_db_if_not_exists()
         if self.hr:
             self.hr.record_callback = self._store_record
-        return
+
+        # We can end up fetching several thousand records in one go. This
+        # takes several minutes and has a chance of screwing up (pump not
+        # answering in time, problems writing to the database etc.), thus
+        # wasting a lot of time. To avoid this situation, we divide large
+        # transfers into smaller batches.
+        #
+        # Set this to `None` to disable batching.
+        self.batch_size = 250
 
     def _store_record(self, record):
         conn = sqlite3.connect(DB_PATH)
@@ -42,6 +50,17 @@ class DatabaseManager:
             ''')
             conn.commit()
             conn.close()
+
+    @staticmethod
+    def _subdivide_ranges(ranges, batch_size):
+        assert batch_size > 0
+        result = []
+        for min_seq, max_seq in ranges:
+            assert min_seq <= max_seq
+            for first in range(min_seq, max_seq + 1, batch_size):
+                last = min(first + batch_size - 1, max_seq)
+                result.append((first, last))
+        return result
 
     def unsubscribe(self):
         pass
@@ -95,8 +114,18 @@ class DatabaseManager:
             ranges.append((start, prev))
         self.logger.debug(f"Identified {len(ranges)} contiguous missing ranges: {ranges}")
 
+        # divide ranges into smaller batches before fetching actual records
+        if self.batch_size is None:
+            self.logger.debug("Skipping subdivision of ranges into batches")
+            ranges_to_fetch = ranges
+        else:
+            self.logger.debug(f"Subdividing ranges into batches of size {self.batch_size}")
+            ranges_to_fetch = self._subdivide_ranges(ranges, self.batch_size)
+
+        self.logger.debug(f"Ranges to fetch: {ranges_to_fetch}")
+
         # Fetch records for each range
-        for min_seq, max_seq in ranges:
+        for min_seq, max_seq in ranges_to_fetch:
             self.logger.debug(f"Fetching records from {min_seq} to {max_seq}")
             try:
              
