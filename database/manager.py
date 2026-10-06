@@ -81,7 +81,9 @@ class DatabaseManager:
 
         # Get the first and last records from the device
         try:
+            self.logger.info("Fetching pump's oldest record")
             first_record = self.hr.get_first_record()
+            self.logger.info("Fetching pump's latest record")
             last_record = self.hr.get_last_record()
             device_first = first_record.sequence_number
             device_last = last_record.sequence_number
