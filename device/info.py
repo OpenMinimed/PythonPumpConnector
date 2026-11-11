@@ -10,21 +10,16 @@ from utils.uuids import UUID
 
 
 class DeviceInfo(GATTBase):
-
-    model:str = None
-    serial:str = None
-    hw:str = None
-    fw:str = None
-    batt:int = None
-
     # 'SW' char does not seem to be used?
 
     def __init__(self, central:Central):
         self.logger = LogManager.get_logger(self.__class__.__name__)
         self.central = central
         self._configure_characteristics()
-        self.__trigger_read()
-        self.read_battery_level()
+        self._model: str = None
+        self._serial: str = None
+        self._hw: str = None
+        self._fw: str = None
         return
 
     def unsubscribe(self):
@@ -32,30 +27,49 @@ class DeviceInfo(GATTBase):
         return
 
     def read_battery_level(self) -> int:
+        self.logger.debug("Fetching battery level from pump")
         raw = self.batt_char.read_raw_value()
-        self.batt = int.from_bytes(dbus_tools.dbus_to_python(raw))
-        return self.batt
+        batt = int.from_bytes(dbus_tools.dbus_to_python(raw))
+        return batt
 
     def get_device_info(self) -> str:
-        self.read_battery_level()
-        toret = f"Pump {self.model}, SN: {self.serial}, HW: {self.hw}, FW: {self.fw}, BATT: {self.batt} % "
+        batt = self.read_battery_level()
+        toret = f"Pump {self.model}, SN: {self.serial}, HW: {self.hw}, FW: {self.fw}, BATT: {batt} % "
         self.logger.debug(toret)
         return toret
 
-    def __trigger_read(self):
-        """
-        Just read these once, during startup, since they should never change.
-        """
-        def decode_string(raw):
-            v = dbus_tools.dbus_to_python(raw)
-            return v.split(b"\x00", 1)[0].decode()
+    @property
+    def model(self):
+        if self._model is None:
+            self.logger.debug("Fetching model from pump")
+            self._model = self._decode_string(self.model_char.read_raw_value())
+        return self._model
 
-        self.logger.info("Trigger Device Info read...")
-        self.model  = decode_string(self.model_char.read_raw_value())
-        self.serial = decode_string(self.serial_char.read_raw_value())
-        self.hw     = decode_string(self.hw_char.read_raw_value())
-        self.fw     = decode_string(self.fw_char.read_raw_value())
-        return 
+    @property
+    def serial(self):
+        if self._serial is None:
+            self.logger.debug("Fetching serial number from pump")
+            self._serial = self._decode_string(self.serial_char.read_raw_value())
+        return self._serial
+
+    @property
+    def hw(self):
+        if self._hw is None:
+            self.logger.debug("Fetching hardware version from pump")
+            self._hw = self._decode_string(self.hw_char.read_raw_value())
+        return self._hw
+
+    @property
+    def fw(self):
+        if self._fw is None:
+            self.logger.debug("Fetching firmware version from pump")
+            self._fw = self._decode_string(self.fw_char.read_raw_value())
+        return self._fw
+
+    @staticmethod
+    def _decode_string(raw):
+        v = dbus_tools.dbus_to_python(raw)
+        return v.split(b"\x00", 1)[0].decode()
 
     def _configure_characteristics(self):
         self.model_char = self._add_char(UUID.DIS_SERVICE, UUID.DIS_CHAR_MODEL_NO,
